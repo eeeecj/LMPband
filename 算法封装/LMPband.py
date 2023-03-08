@@ -1,3 +1,4 @@
+# %%
 import docplex.mp.model as md
 from docplex.mp.conflict_refiner import ConflictRefiner
 import numpy as np
@@ -35,6 +36,7 @@ class LMPband():
 
         self.sg=np.array([(self.sgt[i]*self.phase).sum(axis=1) for i in range(len(self.sgt))])
         self.g=np.array([(self.pgt[i]*phase).sum(axis=1) for i in range(len(self.pgt))])
+        
         
         self.rho=self.vol[0]/self.vol[1]
         self.num=len(vol[0])
@@ -557,6 +559,108 @@ class LMPband():
         mdl=self.mdl
         mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u,sum_v],priorities=[2,2,1],weights=[5,-4,1])
         # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
-        solution = mdl.solve(log_output=True)
-        print(solution.solve_details)
-        print("object value",solution.objective_value)
+        self.solution = mdl.solve(log_output=True)
+        print(self.solution.solve_details)
+        print("object value",self.solution.objective_value)
+        
+    def get_dataframe(self):
+        sol,o,w,n,u,b,yp,pc,nt,C,bb,wb,nb=self.solution,self.o2,self.w2,self.n2,self.u2,self.b2,self.yp,self.pc,\
+        self.nt,self.C,self.bb2,self.wb2,self.nb2
+        num,numr,dwt,dw,d=self.num,self.numr,self.dwt,self.dw,self.d
+        p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
+        o = sol.get_value_dict(o)
+        w = sol.get_value_dict(w)
+        n = sol.get_value_dict(n)
+        u = sol.get_value_dict(u)
+        b = sol.get_value_dict(b)
+        yp = sol.get_value_dict(yp)
+        pc=sol.get_value_dict(pc)
+        nt=sol.get_value_dict(nt)
+        C=sol.get_value_dict(C)
+        bb=sol.get_value_dict(bb)
+        wb=sol.get_value_dict(wb)
+        nb=sol.get_value_dict(nb)
+
+        Df=[[i for i in range(1,num+1)]]
+        Df+=[[d[i] for i in range(num-1)] + [np.nan]]
+        Df+=[[b[i,k] for k in range(num)] for i in range(numr)]
+        Df+=[[o[k] for k in range(num)]]
+        Df+=[[p[k] for k in range(num)]]
+        Df+=[[t[i,k] for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df+=[[y[i,k] for k in range(num)] for i in range(numr)]
+        Df+=[[1/z[k] for k in range(num)]]
+        Df+=[[u[i,k] for k in range(num)] for i in range(numr)]
+        # Df+=[[yp[i,k,j] for k in range(num)] for j in range(lin_num) for i in range(2)]
+        Df+=[[bb[i,k] for k in range(num)] for i in range(2)]
+        Df+=[[(dw[i,k])/z[k]+dwt for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df+=[[tb[i,k]/z[k] for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df=np.array(Df)
+        Df=Df.T
+        Df=pd.DataFrame(Df)
+        cols=["cross_number"]
+        cols+=["distance"]
+        cols+=["b"+str(i) for i in range(1,numr+1)]
+        cols+=["offset","p"]
+        cols+=["t"+str(i) for i in range(1,3)]
+        cols+=["y"+str(i) for i in range(1,numr+1)]
+        cols+=["z"]
+        cols+=["u"+str(i) for i in range(1,numr+1)]
+
+        cols+=["bb"+str(i) for i in range(1,3)]
+        cols+=["dw"+str(i) for i in range(1,3)]
+        cols+=["tb"+str(i) for i in range(1,3)]
+
+        Df.columns=cols
+
+        Df["offset"] = Df.offset * Df.z
+        Df["t1"] = Df.t1 * Df.z
+        Df["t2"] = Df.t2 * Df.z
+        Df["b1"] = Df.b1 * Df.z
+        Df["b2"] = Df.b2 * Df.z
+        Df["b3"] = Df.b3 * Df.z
+        Df["b4"] = Df.b4 * Df.z
+        Df["b5"] = Df.b5 * Df.z
+        Df["b6"] = Df.b6 * Df.z
+        Df["bb1"]=Df.bb1*Df.z
+        Df["bb2"]=Df.bb2*Df.z
+        Df.round(2)
+        self.Df=Df
+        return Df
+    
+    def get_draw_dataframe(self):
+        Df,num=self.Df,self.num
+        w,wb,u,rf,srf,d=self.w2,self.wb2,self.u2,self.rf,self.srf,self.d
+        Df2 = Df.copy()
+        Df2["w1"] = [w[0, k] for k in range(num)]
+        Df2["w2"] = [w[1, k] for k in range(num)]
+        Df2["w3"] = [w[2, k] for k in range(num)]
+        Df2["w4"] = [w[3, k] for k in range(num)]
+        Df2["w5"] = [w[4, k] for k in range(num)]
+        Df2["w6"] = [w[5, k] for k in range(num)]
+        Df2["wb1"]=[wb[0, k] for k in range(num)]
+        Df2["wb2"]=[wb[1, k] for k in range(num)]
+        Df2["u1"] = np.array([u[0, k] for k in range(num)]) * Df.z
+        Df2["u2"] = np.array([u[1, k] for k in range(num)]) * Df.z
+        Df2["u3"] = np.array([u[2, k] for k in range(num)]) * Df.z
+        Df2["u4"] = np.array([u[3, k] for k in range(num)]) * Df.z
+        Df2["u5"] = np.array([u[4, k] for k in range(num)]) * Df.z
+        Df2["u6"] = np.array([u[5, k] for k in range(num)]) * Df.z
+
+        Df2["car_t1"] =Df2.offset + rf[0] * Df2.z  +Df2.w1 * Df2.z - Df2.b1 / 2 
+        Df2["car_t2"] =Df2.offset+ rf[1] * Df2.z+ Df2.w2 * Df2.z- Df2.b2 / 2
+
+        Df2["car_t3"] =Df2.offset+ rf[2] * Df2.z + Df2.w3 * Df2.z - Df2.b3 / 2
+        
+        Df2["car_t4"] =Df2.offset + rf[3] * Df2.z +Df2.w4 * Df2.z - Df2.b4 / 2 
+        Df2["car_t5"] =Df2.offset + rf[4] * Df2.z + Df2.w5 * Df2.z - Df2.b5 / 2 
+        Df2["car_t6"] =Df2.offset + rf[5] * Df2.z + Df2.w6 * Df2.z - Df2.b6 / 2
+
+        Df2["bus_t1"] =Df2.offset + srf[0] * Df2.z + Df2.wb1 * Df2.z - Df2.bb1 / 2
+        Df2["bus_t2"] =Df2.offset + srf[1] * Df2.z + Df2.wb2 * Df2.z - Df2.bb2 / 2
+
+        Df2['on_bus_v1']=[d[i]/(Df.tb1[i]-Df.dw1[i]) for i in range(num-1)]+[np.nan]
+        Df2['in_bus_v1']=[d[i]/(Df.tb2[i]-Df.dw2[i]) for i in range(num-1)]+[np.nan]
+
+ 
+# %%
+class 

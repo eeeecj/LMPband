@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 class LMband():
-    def __init__(self, phase, cycle, vol, pv, pg, d, sgt, srlgt, ison, tau, taub, qb, low, up, linspace, be, lowv, upv,
+    def __init__(self, phase, cycle, vol, pv, pg, d, sgt, ison, tau, taub, qb, low, up, linspace, be, lowv, upv,
                  ex, dwt,lowb,upb,lowbv,upbv,mu,sigma) -> None:
         self.d = d  # 交叉口间距
         self.phase = phase  # 相位时长
@@ -19,7 +19,6 @@ class LMband():
         self.pv = pv  # 路径流量
         self.pg = pg  # 路径通行权
         self.sgt = sgt  # 直行通行权
-        self.srlgt = srlgt  # 直行绿前红灯通行权
         self.ison = ison  # 路径是否为上行方向
         self.tau = tau  # 左转偏移量
         self.taub = taub  # 公交左转偏移量
@@ -33,7 +32,7 @@ class LMband():
         self.rho = self.vol[0]/self.vol[1]
         self.num = len(self.vol[0])
         self.numr = len(self.pv)
-        self.nump = len(self.pg)
+        self.nump = len(self.phase[0])
         self.lin_num = len(self.lin)
 
         self.M = 1e6
@@ -530,10 +529,314 @@ class LMband():
 
         mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u,sum_v],priorities=[2,2,1],weights=[5,-4,1])
         # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
-        solution = mdl.solve(log_output=True)
-        print(solution.solve_details)
-        print("object value",solution.objective_value)
+        self.solution = mdl.solve(log_output=True)
+        print(self.solution.solve_details)
+        print("object value",self.solution.objective_value)
 
     def solve(self):
         self._M1_solve()
         self._M2_solve()
+
+    def _get_M2_result(self):
+        sol=self.solution
+        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self.b2,self.o2,self.u2,self.n2,self.yp,self.pc,self.nt,self.C,\
+        self.bb2,self.wb2,self.nb2,self.w2
+        o = sol.get_value_dict(o)
+        w = sol.get_value_dict(w)
+        n = sol.get_value_dict(n)
+        u = sol.get_value_dict(u)
+        b = sol.get_value_dict(b)
+        yp = sol.get_value_dict(yp)
+        pc=sol.get_value_dict(pc)
+        nt=sol.get_value_dict(nt)
+        C=sol.get_value_dict(C)
+        bb=sol.get_value_dict(bb)
+        wb=sol.get_value_dict(wb)
+        nb=sol.get_value_dict(nb)
+        return b,o,u,n,yp,pc,nt,C,bb,wb,nb,w
+    def get_dataframe(self):
+        num,numr,d,dwt=self.num,self.numr,self.d,self.dwt
+        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self._get_M2_result()
+        z,t,p,y,dw,tb=self._get_M1_result()
+        Df=[[i for i in range(1,num+1)]]
+        Df+=[[d[i] for i in range(num-1)] + [np.nan]]
+        Df+=[[b[i,k] for k in range(num)] for i in range(numr)]
+        Df+=[[o[k] for k in range(num)]]
+        Df+=[[p[k] for k in range(num)]]
+        Df+=[[t[i,k] for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df+=[[y[i,k] for k in range(num)] for i in range(numr)]
+        Df+=[[1/z[k] for k in range(num)]]
+        Df+=[[u[i,k] for k in range(num)] for i in range(numr)]
+        # Df+=[[yp[i,k,j] for k in range(num)] for j in range(lin_num) for i in range(2)]
+        Df+=[[bb[i,k] for k in range(num)] for i in range(2)]
+        Df+=[[(dw[i,k])/z[k]+dwt for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df+=[[tb[i,k]/z[k] for k in range(num-1)]+[np.nan] for i in range(2)]
+        Df=np.array(Df)
+        Df=Df.T
+        Df=pd.DataFrame(Df)
+        cols=["cross_number"]
+        cols+=["distance"]
+        cols+=["b"+str(i) for i in range(1,numr+1)]
+        cols+=["offset","p"]
+        cols+=["t"+str(i) for i in range(1,3)]
+        cols+=["y"+str(i) for i in range(1,numr+1)]
+        cols+=["z"]
+        cols+=["u"+str(i) for i in range(1,numr+1)]
+        # cols+=["yp_on_"+str(i) for i in range(1,lin_num+1)]
+        # cols+=["yp_in_"+str(i) for i in range(1,lin_num+1)]
+
+        cols+=["bb"+str(i) for i in range(1,3)]
+        cols+=["dw"+str(i) for i in range(1,3)]
+        cols+=["tb"+str(i) for i in range(1,3)]
+
+        Df.columns=cols
+
+        Df["offset"] = Df.offset * Df.z
+        Df["t1"] = Df.t1 * Df.z
+        Df["t2"] = Df.t2 * Df.z
+        for i in range(numr):
+            Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
+        Df["bb1"]=Df.bb1*Df.z
+        Df["bb2"]=Df.bb2*Df.z
+        return Df
+
+    def get_draw_dataframe(self):
+        Df=self.get_dataframe()
+        num,d,rf,srf,numr=self.num,self.d,self.rf,self.srf,self.numr
+        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self._get_M2_result()
+        Df2 = Df.copy()
+        for i in range(numr):
+            Df2["w"+str(i+1)]=[w[i, k] for k in range(num)]
+            Df2["u"+str(i+1)]=np.array([u[i, k] for k in range(num)]) * Df.z
+            Df2["car_t"+str(i+1)]=Df2.offset + rf[i] * Df2.z  +Df2.loc[:,"w"+str(i+1)] * Df2.z - Df2.loc[:,"b"+str(i+1)]/ 2 
+
+        Df2["wb1"]=[wb[0, k] for k in range(num)]
+        Df2["wb2"]=[wb[1, k] for k in range(num)]
+        Df2["bus_t1"] =Df2.offset + srf[0] * Df2.z + Df2.wb1 * Df2.z - Df2.bb1 / 2
+        Df2["bus_t2"] =Df2.offset + srf[1] * Df2.z + Df2.wb2 * Df2.z - Df2.bb2 / 2
+        Df2['on_bus_v1']=[d[i]/(Df.tb1[i]-Df.dw1[i]) for i in range(num-1)]+[np.nan]
+        Df2['in_bus_v1']=[d[i]/(Df.tb2[i]-Df.dw2[i]) for i in range(num-1)]+[np.nan]
+        return Df2
+    def data_formater(self,data, last_data, cross_num,z):
+        while data < last_data:
+            data += z[cross_num]
+        return data
+
+    def onbound(self,b, car_t, t, dis, distance):
+        zip_x = [car_t,car_t + b,car_t + t + b,car_t + t,]
+        zip_y = [dis, dis, dis + distance, dis + distance]
+        return zip_x, zip_y
+
+    def inbound(self,b, car_t, t, dis, distance):
+        zip_x = [  car_t + t, car_t + t + b, car_t + b, car_t]
+        zip_y = [dis - distance, dis - distance, dis, dis]
+        return zip_x, zip_y
+    
+    def draw_car_bound(self,filepath,colors,legends,idx):
+        Df2=self.get_draw_dataframe()
+        phase,numr,num,pgt,ison,nump=self.phase,self.numr,self.num,self.pg,self.ison,self.nump
+        green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
+
+        fig1 = plt.figure(figsize=(20, 20), dpi=300)
+        ax1 = fig1.add_subplot()
+        legends = legends
+        color = colors
+        # Df2.car_t1 += Df2.z
+        # Df2.car_t2 += Df2.z * 2
+        # Df2.car_t3 += Df2.z * 3
+        for i in range(1,numr+1):
+            tmpstr="car_t"+str(i)
+            if ison[i-1]==0:
+                for j in range(1, num):
+                    Df2.loc[j,tmpstr]=self.data_formater(Df2.loc[j,tmpstr], Df2.loc[j-1,tmpstr], j,Df2.z)
+            else:
+                for j in range(num - 1, 0, -1):
+                    Df2.loc[j-1,tmpstr] =self.data_formater(Df2.loc[j,tmpstr], Df2.loc[j,tmpstr], j - 1,Df2.z)
+        
+        max_width =max(Df2[["car_t"+str(i) for i in range(1,numr+1)]].max())+Df2.z.max()
+        max_hight = sum(Df2.distance[0 : num - 1]) + 100
+        for i in range(0, num):
+            offset_r = Df2.offset[i] - Df2.z[i]
+            sum_dis = sum(Df2.distance[0:i])
+            while offset_r < max_width:
+                for j in range(nump):
+                    if green_time[j,i] == 0:
+                        continue
+                    else:
+                        if pgt[idx-1,i,j]==1:
+                            ax1.add_patch(
+                                plt.Rectangle(
+                                    (offset_r, sum(Df2.distance[0:i])),
+                                    green_time[j, i],
+                                    20,
+                                    facecolor="green",
+                                    hatch=color[j]["hatch"],
+                                    fill=True,
+                                    edgecolor='black',
+                                    linewidth=0.5
+                                )
+                            )
+                        else:
+                            ax1.add_patch(
+                                plt.Rectangle(
+                                    (offset_r, sum(Df2.distance[0:i])),
+                                    green_time[j, i],
+                                    20,
+                                    facecolor="white",
+                                    # hatch=color[j]["hatch"],
+                                    # fill=color[j]["fill"],
+                                    edgecolor='black',
+                                    linewidth=0.5
+                                )
+                            )
+                        offset_r += green_time[j,i]
+            ax1.text(10, sum(Df2.distance[0:i]) + 25, str(i + 1), fontsize=12)
+        plt.plot([0, 0], [0, max_hight])
+        if ison[idx-1]==0:
+            for i in range(0, num):
+                dis = sum(Df2.distance[0:i])
+                if Df2.loc[i,"b"+str(idx)]== 0:
+                    continue
+                else:
+                    bstr,carstr,tstr="b"+str(idx),"car_t"+str(idx),"t"+str(idx)
+                    zip_x, zip_y = self.onbound(Df2.loc[i,bstr], Df2.loc[i,carstr], Df2.loc[i,tstr], dis, Df2.distance[i])
+                    onbound1 = ax1.add_patch(pch.Polygon(xy=list(zip(zip_x, zip_y)), fill=False,linewidth=1))
+        else:
+            for i in range(1, num):
+                dis = sum(Df2.distance[0:i])
+                if Df2.loc[i,"b"+str(idx)] == 0:
+                    continue
+                else:
+                    bstr,carstr,tstr="b"+str(idx),"car_t"+str(idx),"t"+str(idx)
+                    zip_x, zip_y = self.inbound(Df2.loc[i,bstr], Df2.loc[i,carstr], Df2.loc[i-1,tstr], dis, Df2.distance[i - 1])
+                    inbound2 = ax1.add_patch(pch.Polygon(xy=list(zip(zip_x, zip_y)),fill=False,linewidth=1))
+
+        plt.xlim([0,max_width,])
+        plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
+        # ax2.set_xticks([])
+        # ax2.set_yticks([])
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+        # ax1.legend(
+        #     handles=[onbound1, onbound2, onbound3, inbound1, inbound2, inbound3],
+        #     labels=["path{}:".format(i) + legends[i - 1] for i in range(1, 7)],
+        #     fontsize=18,
+        #     loc="center right",
+        # )
+        fig1.savefig(filepath, bbox_inches="tight")
+
+    def draw_bus_bound(self,filepath):
+        Df2=self.get_draw_dataframe()
+        ex,num,nump,sgt,phase=self.ex,self.num,self.nump,self.sgt,self.phase
+        font1 = {'family': 'SimSun', 'size': 22, 'weight': 'normal'}
+        bus_stop=[ex[i]*(sum(Df2.distance[0:i])+Df2.distance[i]*0.5) for i in range(0,num-1)]
+        green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
+        fig1 = plt.figure(figsize=(20, 20), dpi=300)
+        ax1 = fig1.add_subplot()
+
+        Df2.bus_t1 += Df2.z
+        for i in range(1, num):
+            Df2.loc[i, "bus_t1"] = self.data_formater(Df2.bus_t1[i], Df2.bus_t1[i - 1], i,Df2.z)
+
+        for i in range(num - 1, 0, -1):
+            Df2.loc[i - 1, "bus_t2"] = self.data_formater(Df2.bus_t2[i - 1], Df2.bus_t2[i], i - 1,Df2.z)
+
+        max_width =max(Df2[["bus_t1", "bus_t2"]].max())+Df2.z.max()
+
+        max_hight = sum(Df2.distance[0 : num - 1]) + 100
+        print(max_width,max_width/Df2.z[0])
+        legendc = dict()
+        for i in range(0, num):
+            offset_r = Df2.offset[i] - Df2.z[i]
+            sum_dis = sum(Df2.distance[0:i])
+            while offset_r < max_width:
+                for j in range(nump):
+                    if green_time[j,i] == 0:
+                        continue
+                    else:
+                        if sgt[1,i,j]==1:
+                            ax1.add_patch(
+                                plt.Rectangle(
+                                    (offset_r, sum(Df2.distance[0:i])),
+                                    green_time[j, i],
+                                    20,
+                                    facecolor="green",
+                                    # hatch=color[j]["hatch"],
+                                    fill=True,
+                                    edgecolor='black',
+                                    linewidth=0.5
+                                )
+                            )
+                        else:
+                            ax1.add_patch(
+                                plt.Rectangle(
+                                    (offset_r, sum(Df2.distance[0:i])),
+                                    green_time[j, i],
+                                    20,
+                                    facecolor="white",
+                                    # hatch=color[j]["hatch"],
+                                    # fill=color[j]["fill"],
+                                    edgecolor='black',
+                                    linewidth=0.5
+                                )
+                            )
+                        offset_r += green_time[j,i]
+            ax1.text(10, sum(Df2.distance[0:i]) + 25, str(i + 1), fontsize=12)
+            
+        plt.plot([0, 0], [0, max_hight])
+            #绘制公交车站
+        for i in range(0,num-1):
+            flag=bus_stop[i]
+            if flag!=0: 
+                plt.plot([-100,900],[bus_stop[i],bus_stop[i]],color=sns.color_palette('Greys',5)[0],linewidth=1)
+                ax1.text(-98,bus_stop[i]-50,'公交车站',fontdict=font1)
+
+        # for i in range(0,num-1):
+        #     dis=sum(Df2.distance[0:i])
+        #     if Df2.bb1[i]==0:
+        #         continue
+        #     else:
+        #         if bus_stop[i]>0:
+        #             bus_dis=(bus_stop[i]-dis)
+        #             zip_x,zip_y=onbound(Df2.bb1[i],Df2.bus_t1[i],bus_dis/Df2.on_bus_v1[i],dis,bus_dis)
+        #             ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+
+        #             zip_x,zip_y=onbound(Df2.bb1[i],Df2.bus_t1[i]+bus_dis/Df2.on_bus_v1[i]+Df2.dw1[i],
+        #             bus_dis/Df2.on_bus_v1[i],dis+bus_dis,bus_dis)
+        #             ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+        #         else:
+        #             zip_x,zip_y=onbound(Df2.bb1[i],Df2.bus_t1[i],Df2.tb1[i],dis,Df.distance[i])
+        #             ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+
+        for i in range(1,num):
+            dis=sum(Df2.distance[0:i])
+            if Df2.bb2[i]==0:
+                continue
+            else:
+                if bus_stop[i-1]>0:
+                    bus_dis=dis-bus_stop[i-1]
+                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i],bus_dis/Df2.in_bus_v1[i-1],dis,bus_dis)
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+
+                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i]+bus_dis/Df2.in_bus_v1[i-1]+Df2.dw2[i-1],
+                    bus_dis/Df2.in_bus_v1[i-1],dis-bus_dis,bus_dis)
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+                else:
+                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i],Df2.tb2[i-1],dis,Df2.distance[i-1])
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+
+
+        plt.xlim([0,max_width,])
+        plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
+        # ax2.set_xticks([])
+        # ax2.set_yticks([])
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+        # ax1.legend(
+        #     handles=[onbound1, onbound2, onbound3, inbound1, inbound2, inbound3],
+        #     labels=["path{}:".format(i) + legends[i - 1] for i in range(1, 7)],
+        #     fontsize=18,
+        #     loc="center right",
+        # )
+        fig1.savefig(filepath, bbox_inches="tight"
+        )

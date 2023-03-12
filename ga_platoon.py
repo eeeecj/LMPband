@@ -3,15 +3,16 @@ import numpy as np
 from sko.GA import GA
 
 class max_dt:
-    def __init__(self,c=100,dw=15,s=60,g=0.5,capacity=3,prop=0.9) -> None:
+    def __init__(self,c=100,dw=15,q1=60,q2=120,g=0.5,capacity=3,prop=0.9) -> None:
         self.dw=dw
         self.c=c
-        self.s=s
+        self.q1=q1
+        self.q2=q2
         self.g=g
         self.capacity=capacity
         self.prop=prop
     def get_k_patoon(self,k,dt):
-        lam=self.s*self.g
+        lam=self.q1+self.q2*self.g
         mu=1/(self.dw+dt)*3600/self.c
         rth=lam/mu
         # print(lam,mu,rth)
@@ -28,9 +29,10 @@ class max_dt:
         return self.prop-s
     
     def solve(self):
-        self.ga=GA(func=self.get_obj,n_dim=1,size_pop=50,max_iter=800,prob_mut=0.01,lb=[0],ub=[0.5],constraint_ueq=[self.add_neq_cons],precision=1e-7)
+        self.ga=GA(func=self.get_obj,n_dim=1,size_pop=50,max_iter=800,prob_mut=0.01,lb=[0],ub=[self.g],constraint_ueq=[self.add_neq_cons],precision=1e-7)
         best_x,best_y=self.ga.run()
-        print('best_x:', best_x, '\n', 'best_y:', best_y)
+        # print('best_x:', best_x, '\n', 'best_y:', best_y)
+        return best_x
 
 # if __name__=="_main_":
 #     a=max_dt(dw=15/100,s=3600/120/100,g=0.5,capacity=3)

@@ -1,22 +1,15 @@
-import pandas as pd
-import cvxpy as cp
-import numpy as np
 import docplex.mp.model as md
 from docplex.mp.conflict_refiner import ConflictRefiner
+import numpy as np
+import pandas as pd
 import scipy.stats as stats
-import seaborn as sns 
-import matplotlib.patches as pch 
+import seaborn as sns
+import matplotlib.patches as pch
 import matplotlib.pyplot as plt
-import sys
-import os
-from scipy.optimize import curve_fit
-sys.path.append(os.path.join(os.getcwd(),".."))
-from ga_platoon import max_dt
 
-
-class LMband():
-    def __init__(self, phase, cycle, vol, pv, pg, d, sgt, ison, tau, taub, qb,qb_x,cap, low, up, linspace, be, lowv, upv,
-                 ex, dwt,lowb,upb,lowbv,upbv,spd_on,spd_in) -> None:
+class MPband():
+    def __init__(self,phase, cycle, vol, pv, pg, d, sgt, ison, tau, taub, qb, low, up, be, lowv, upv,
+                 ex, dwt,lowb,upb,lowbv,upbv,p) -> None:
         self.d = d  # 交叉口间距
         self.phase = phase  # 相位时长
         self.cycle = np.array(cycle)  # 信号周期
@@ -28,19 +21,14 @@ class LMband():
         self.tau = tau  # 左转偏移量
         self.taub = taub  # 公交左转偏移量
         self.qb = qb  # 公交流量
-        self.qb_x=qb_x #红灯时间时支路转入车辆
-        self.cap=cap # 公交车站的容量
         self.ex = ex  # 公交车站
         self.dwt = dwt  # 平均停靠时间
-        self.lin = linspace  # 速度求解空间
-        self.spd_on=spd_on
-        self.spd_in=spd_in
+        self.p=p
 
         self.rho = self.vol[0]/self.vol[1]
         self.num = len(self.vol[0])
         self.numr = len(self.pv)
         self.nump = len(self.phase[0])
-        self.lin_num = len(self.lin)
 
         self.M = 1e6
         self.nx = 1e-8
@@ -57,48 +45,7 @@ class LMband():
         self.srf = np.array([self.get_rf(self.phase, self.sgt[i]) for i in range(len(self.sgt))])
 
         self.model = md.Model("LMBand")
-        self.md2=md.Model("variable_LMband")
-
-        # self.GetProporation()
-        # self.get_dw_max()
-        self.dwm=np.array([[22.60083057,13.46496839,24.31,23.02457646,25.0084692,5.65743377,26.18040372,21.45,
-                            21.30610731,15.91674887,10.69071851,15.91674887,21.15051345],
-                           [27.90700128,24.76865382,26,33.1819511,33.15,10.60465754,31.59,21.45,30.94793897,
-                            23.94176338,17.14793366,23.94176338,30.74566144]])
-
-    def func(self,x,mu,sigma,N,D):
-        return np.exp(-(x-mu)**2/(2*sigma**2))/(sigma*np.sqrt(2*np.pi))*N
-    
-    def get_percent(self,data_x):
-        area_list=np.array([[0,5],[5,10],[10,15],[15,20],[20,25],[25,30],[30,35],[35,40],[40,45],[45,50]])
-        area_list=pd.DataFrame(area_list)
-        area_list.columns=['ls','us']
-        temp=list()
-        for each in area_list.iterrows():
-            temp.append(data_x[(data_x['speed']>each[1]['ls'])&(data_x['speed']<each[1]['us'])]['speed'].count())
-        area_list['count']=np.array(temp)
-        area_list['prop']=area_list['count']/area_list['count'].sum()
-        area_list['ave']=(area_list['ls']+area_list['us'])/2/3.6
-        return area_list
-    def get_spd_proporation(self,crnl,on):
-        spd=self.spd_on
-        if on==False:
-            spd=self.spd_in
-        tag=False
-        for k in crnl:
-            tag|=spd["name"]==k
-        dx=spd[tag]
-        area_list=self.get_percent(dx)
-        propt,_=curve_fit(self.func,area_list['ave'],area_list['prop'],bounds=[0,[15.,10,1000,1000.]],maxfev=100000)
-        return propt.round(4)
-    def get_subs(self,p):
-        num=self.num
-        p=np.array([p[i] for i in range(num)],dtype=int)
-        pcum=p.cumsum()+1
-        return pcum
-    def get_subcrs(self):
-        pcum=self.pcum
-        return [np.where(pcum==k)[0] for k in np.unique(pcum) ]
+        
     def get_rf(self, d, p):
         tmp = []
         for i, a in enumerate(p):
@@ -108,21 +55,16 @@ class LMband():
                 a[:idx[0]] = 1
             tmp.append((d[i]*a).sum())
         return tmp
-
-    def _add_M1_car_variables(self):
+    def _add_variables(self):
         model, num, numr, cycle = self.model, self.num, self.numr, self.cycle
         #   公共变量
         Z_list = [(i) for i in range(num)]
-        self.z = model.continuous_var_dict(
-            Z_list, lb=1/cycle[1], ub=1/cycle[0], name="z")
+        self.z = model.continuous_var_dict(Z_list, lb=1/cycle[1], ub=1/cycle[0], name="z")
         o_list = [(i) for i in range(num)]
         self.o = model.continuous_var_dict(o_list, lb=0, ub=1, name="o")
         t_list = [(i, k) for i in range(2) for k in range(num-1)]
         self.t = model.continuous_var_dict(t_list, lb=0, name="t")
 
-        # 长干道变量
-        p_list = [(i) for i in range(num)]
-        self.p = model.binary_var_dict(p_list, name="p")
         w_list = [(i, k) for i in range(numr) for k in range(num)]
         self.w = model.continuous_var_dict(w_list, lb=0, ub=1, name="w")
         b_list = [(i, k) for i in range(numr) for k in range(num)]
@@ -133,11 +75,11 @@ class LMband():
         self.u = model.continuous_var_dict(u_list, lb=0, ub=1, name="u")
         y_list = [(i, k) for i in range(numr) for k in range(num)]
         self.y = model.binary_var_dict(y_list, name="y")
-
-    def _add_M1_car_constraints(self):
+    
+    def _add_car_constraints(self):
         z, o, t, p, w, b, n, u, y = self.z, self.o, self.t, self.p, self.w, self.b, self.n, self.u, self.y
-        model, g, d, r, num, numr, nump, scp, spv, lin, lin_num, be, M, tau = self.model, self.g, self.d, self.r, self.num,\
-            self.numr, self.nump, self.spc, self.spv, self.lin, self.lin_num, self.be, self.M, self.tau
+        model, g, d, r, num, numr, nump, scp, spv, be, M, tau = self.model, self.g, self.d, self.r, self.num,\
+            self.numr, self.nump, self.spc, self.spv, self.be, self.M, self.tau
         ison, nx, M,rho = self.ison, self.nx, self.M,self.rho
 
         for k in range(num):
@@ -208,14 +150,13 @@ class LMband():
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] - M * (1 - y[i, k+1]))
             model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[0,k] <=
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] + M * (1 - y[i, k+1]))
-
-
+            
             model.add_constraint(-M * p[k+1] <= y[i, k + 1] - y[i, k])
             model.add_constraint(y[i, k + 1] - y[i, k] <= M * p[k+1])
 
             model.add_constraints([b[i, k+1]/2-M*p[k+1] <= w[i, k], w[i, k] <= g[i, k]-b[i, k+1]/2+M*p[k+1]])
 
-    def _add_M1_bus_variables(self):
+    def _add_bus_variables(self):
         model, num = self.model, self.num
         wb_list = [(i, k) for i in range(2) for k in range(num)]
         self.wb = model.continuous_var_dict(wb_list, lb=0, ub=1, name="wb")
@@ -230,11 +171,11 @@ class LMband():
         ub_list=[(i,k) for i in range(2) for k in range(num)]
         self.ub=model.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
     
-    def _add_M1_bus_constaraints(self):
+    def _add_bus_constaraints(self):
         z, o, tb, p, wb, bb, nb,dw = self.z, self.o, self.tb, self.p, self.wb, self.bb, self.nb,self.dw
         model, sg, d, srf, num, spcb, spvb, be, M, taub = self.model, self.sg, self.d, self.srf, self.num,\
              self.spcb, self.spvb,  self.be, self.M, self.taub
-        ison, nx, M,rho,ex ,dwt,ub,dwm= self.ison, self.nx, self.M,self.rho,self.ex,self.dwt,self.ub,self.dwm
+        ison, nx, M,rho,ex ,dwt,ub= self.ison, self.nx, self.M,self.rho,self.ex,self.dwt,self.ub
 
         for k in range(num-1):
             model.add_constraint(d[k] / spcb[1] * z[k] <= tb[0, k]-ex[k]*dwt*z[k]-dw[0,k])
@@ -264,7 +205,7 @@ class LMband():
 
         for k in range(num-1):
             for i in range(2):
-                model.add_constraint(dw[i,k]<=ex[k]*dwm[i,k]*z[k])
+                model.add_constraint(dw[i,k]<=ex[k]*15*z[k])
 
         for k in range(num):
             for i in range(2):
@@ -286,369 +227,44 @@ class LMband():
             #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])     
             # model.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
 
-    def _add_M1_obj(self):
+    def _add_obj(self):
         self.sum_b = self.model.sum([self.pv[i] * self.b[i, k] for i in range(self.numr) for k in range(self.num)])
-        self.sum_u = self.model.sum([self.pv[i] * self.u[i, k] for i in range(self.numr) for k in range(self.num)])
-        self.sum_p = self.model.sum([self.p[k] * (self.vol[0, k] + self.vol[1, k]) for k in range(self.num)])
         self.sum_bb = self.model.sum_vars(self.bb)*self.qb[0]
     
-    def _M1_solve(self):
-        self._add_M1_car_variables()
-        self._add_M1_car_constraints()
-        self._add_M1_bus_variables()
-        self._add_M1_bus_constaraints()
-        self._add_M1_obj()
-        model,sum_b,sum_u,sum_p,sum_bb=self.model,self.sum_b,self.sum_u,self.sum_p,self.sum_bb
-        model.set_multi_objective("max",[sum_b+sum_bb,sum_u,sum_p],weights=[5,-4,-2])
+    def _solve(self):
+        self._add_variables()
+        self._add_car_constraints()
+        self._add_bus_variables()
+        self._add_bus_constaraints()
+        self._add_obj()
+        model,sum_b,sum_bb=self.model,self.sum_b,self.sum_bb
+        model.set_multi_objective("max",[sum_b+sum_bb],weights=[1])
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)
 
-    def _get_M1_result(self):
+
+    def _get_result(self):
         sol,z,t,p,y,dw,tb=self.sol,self.z,self.t,self.p,self.y,self.dw,self.tb
+        o,w,n,u,b,bb,wb,nb=self.o,self.w,self.n,self.u,self.b,self.bb,self.wb,self.nb
         z = sol.get_value_dict(z)
         t = sol.get_value_dict(t)
-        p = sol.get_value_dict(p)
         y = sol.get_value_dict(y)
         dw=sol.get_value_dict(dw)
         tb=sol.get_value_dict(tb)
-        
-        return z,t,p,y,dw,tb
-    
-    def _add_M2_car_variables(self):
-        mdl,num,lin_num,numr=self.md2,self.num,self.lin_num,self.numr
-        o_list = [(i) for i in range(num)]
-        self.o2 = mdl.continuous_var_dict(o_list, lb=0, ub=1, name="o")
-        ### 速度波动变量
-        yp_list=[(i,j,k) for i in range(2) for j in range(num) for k in range(lin_num)]
-        self.yp=mdl.binary_var_dict(yp_list,name="yp")
-
-        nt_list = [(i, j, k) for i in range(2) for j in range(num) for k in range(lin_num)]
-        self.nt = mdl.integer_var_dict(nt_list, lb=0, ub=10, name="nt")
-
-        C_list=[(i,j,k) for i in range(2) for j in range(num) for k in range(lin_num)]
-        self.C=mdl.continuous_var_dict(C_list,lb=0,ub=1,name="C")
-
-        pc_list=[(i,j,k) for i in range(2) for j in range(num) for k in range(lin_num)]
-        self.pc=mdl.binary_var_dict(pc_list,name="pc")
-
-        w_list = [(i, k) for i in range(numr) for k in range(num)]
-        self.w2 = mdl.continuous_var_dict(w_list, lb=0, ub=1, name="w")
-
-        b_list = [(i, k) for i in range(numr) for k in range(num)]
-        self.b2 = mdl.continuous_var_dict(b_list, lb=0, ub=1, name="b")
-
-        n_list = [(i, k) for i in range(numr) for k in range(num)]
-        self.n2 = mdl.integer_var_dict(n_list, lb=0, ub=10, name="n")
-
-        u_list = [(i, k) for i in range(numr) for k in range(num)]
-        self.u2 = mdl.continuous_var_dict(u_list, lb=0, ub=1, name="u")
-
-    def _add_M2_car_constraints(self):
-        mdl,num,numr,b,w,g,u,o=self.md2,self.num,self.numr,self.b2,self.w2,self.g,self.u2,self.o2
-        nx,M,ison,rho,be=self.nx,self.M,self.ison,self.rho,self.be
-        z,t,p,y,dw,tb=self._get_M1_result()
-        
-        for k in range(num):
-            for i in range(numr):
-                mdl.add_constraint(b[i, k] / 2<= w[i, k])
-                mdl.add_constraint(w[i, k] <= g[i][k] - b[i, k] / 2)
-
-        for k in range(num):
-            for i in range(numr):
-                mdl.add_constraints([nx * p[k] <= u[i, k], u[i, k] <= p[k]])
-
-        for k in range(num):
-            for i in range(numr):
-                mdl.add_constraint(be * z[k] - M * (1 - y[i, k]) <= b[i, k])
-                mdl.add_constraint(b[i, k] <= y[i, k])
-
-        mdl.add_constraint(o[0]==0)
-        for i in range(numr):
-            if ison[i]==0:
-                self._add_M2_split_on_cons(i)
-            elif ison[i]==1:
-                self._add_M2_split_in_cons(i)
-
-        for k in range(num):
-            mdl.add_constraint((1 - rho[k]) * mdl.sum([b[i, k]*(1-ison[i]) for i in range(numr)])>=\
-                (1 - rho[k])* rho[k]* mdl.sum([b[i, k]*ison[i] for i in range(numr)]))
-
-    def _add_M2_split_on_cons(self,i):
-        mdl,num,o,w,u,n,b=self.md2,self.num,self.o2,self.w2,self.u2,self.n2,self.b2
-        rf,M,tau,g=self.rf,self.M,self.tau,self.g
-        z,t,p,y,dw,tb=self._get_M1_result()
-
-        for k in range(num-1):
-            mdl.add_constraint(o[k] + rf[i, k] + w[i, k] + t[0, k] + u[i, k+1] >=
-                                o[k + 1] + rf[i, k+1] + w[i, k + 1] + n[i, k + 1]+tau[0,k+1] - M * (1 - y[i, k+1]))
-            mdl.add_constraint(o[k] + rf[i, k] + w[i, k] + t[0, k] + u[i, k+1] <=
-                                o[k + 1] + rf[i, k+1] + w[i, k + 1] + n[i, k + 1]+tau[0,k+1] + M * (1 - y[i, k+1]))
-
-            mdl.add_constraints([b[i,k]/2-M*p[k+1]<=w[i,k+1],w[i,k+1]<=g[i,k+1]-b[i,k]/2+M*p[k+1]])
-
-    def _add_M2_split_in_cons(self,i):
-        mdl,num,o,w,u,n,b=self.md2,self.num,self.o2,self.w2,self.u2,self.n2,self.b2
-        rf,M,g,tau=self.rf,self.M,self.g,self.tau
-        z,t,p,y,dw,tb=self._get_M1_result()
-
-        for k in range(num-1):
-            mdl.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] >=
-                                o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] - M * (1 - y[i, k+1]))
-            mdl.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] <=
-                                o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] + M * (1 - y[i, k+1]))
-            
-            mdl.add_constraints([b[i,k+1]/2-M*p[k+1]<=w[i,k],w[i,k]<=g[i,k]-b[i,k+1]/2+M*p[k+1]])
-
-    def _add_M2_bus_variables(self):
-        mdl,num=self.md2,self.num
-        wb_list = [(i, k) for i in range(2) for k in range(num)]
-        self.wb2 = mdl.continuous_var_dict(wb_list, lb=0, ub=1, name="wb")
-
-        bb_list = [(i, k) for i in range(2) for k in range(num)]
-        self.bb2 = mdl.continuous_var_dict(bb_list, lb=0, ub=1, name="bb")
-
-        nb_list = [(i, k) for i in range(2) for k in range(num)]
-        self.nb2 = mdl.integer_var_dict(nb_list, lb=0, ub=10, name="nb")
-
-        ub_list=[(i,k) for i in range(2) for k in range(num)]
-        self.ub2=mdl.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
-
-    def _add_M2_bus_constraints(self):
-        mdl,num,bb,wb,sg,be,o,nb=self.md2,self.num,self.bb2,self.wb2,self.sg,self.be,self.o2,self.nb2
-        z,t,p,y,dw,tb=self._get_M1_result()
-        srf,M,taub,ub,nx=self.srf,self.M,self.taub,self.ub2,self.nx
-        
-        for k in range(num):
-            for i in range(2):
-                mdl.add_constraint(bb[i,k]/2<=wb[i,k]) 
-                mdl.add_constraint(wb[i,k]<=sg[i,k]-bb[i,k]/2)      
-
-        for i in range(2):
-            mdl.add_constraints([bb[i,k]>=be*z[k] for k in range(num)])
-        
-        for k in range(num):
-            for i in range(2):
-                mdl.add_constraints([nx * p[k] <= ub[i, k], ub[i, k] <= p[k]])
-
-        for k in range(num-1):
-            mdl.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
-            mdl.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
-            # mdl.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k] <=
-            #                         o[k + 1] + srf[0, k+1] + wb[0, k + 1]+taub[0,k+1]+nb[0,k+1]+M*p[k+1])
-            # mdl.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k]  >=
-            #                         o[k + 1] + srf[0, k+1] + wb[0, k + 1]+taub[0,k+1]+nb[0, k+1]- M*p[k+1])
-            mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
-
-
-            # mdl.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
-
-            # mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] >=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] - M * p[k+1] )
-            # mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] <=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])
-                
-            mdl.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
-
-    def _add_M2_spd_constraints(self):
-        linspace,pc,C,d,nt,yp,tau,vol,lin_num=self.lin,self.pc,self.C,self.d,self.nt,self.yp,self.tau,\
-        self.vol,self.lin_num
-        srf,sg,M,taub,num=self.srf,self.sg,self.M,self.taub,self.num
-        mdl,o=self.md2,self.o2
-        z,t,p,y,dw,tb=self._get_M1_result()
-
-        self.pcum=self.get_subs(p)
-        subcrs=self.get_subcrs()
-        props=[[],[]]
-        for i in range(len(subcrs)):
-            propt=self.get_spd_proporation(subcrs[i],True)
-            pro=self.GetProporation(propt[0],propt[1])
-            props[0].append(pro) 
-
-            propt=self.get_spd_proporation(subcrs[i],False)
-            pro=self.GetProporation(propt[0],propt[1])
-            props[1].append(pro) 
-
-        print(props)  
-
-        self.sum_on=0
-        self.sum_in=0
-        onbound_x=[]
-        inbound_x=[]
-        for i,v in enumerate(linspace):
-            A_on_0=o[0]+srf[0,0]
-            B_on_0=o[0]+srf[0,0]+sg[0,0]
-            mdl.add_if_then(pc[0,0,i]==1,C[0,0,i]==B_on_0-A_on_0)
-            mdl.add_if_then(pc[0,0,i]==0,C[0,0,i]==0)
-            onb=self._add_var_on_cons(
-                A=A_on_0,
-                B=B_on_0,
-                o=o,
-                r=srf[0],
-                g=sg[0],
-                t=np.array([d[j]/v*z[j] for j in range(num-1)]),
-                n=np.array([nt[0,j,i] for j in range(num)]),
-                k=1,
-                end=num,
-                yp=np.array([yp[0,j,i] for j in range(num)]),
-                px=tau[0],
-                p=np.array([p[k] for k in range(num)]),
-                pc=np.array([pc[0,j,i] for j in range(num)]),
-                C=[C[0,k,i] for k in range(num)],
-                onbound=[[o[0]+srf[0,0],o[0]+srf[0,0]+sg[0,0],o[0]+sg[0,0]]],
-                z=z
-            )
-            self.sum_on+=mdl.sum([C[0,k,i]*vol[0,k]*props[0][self.pcum[k]-1][i] for k in range(num)])
-            onbound_x.append(onb)
-            
-            A_in_0=o[num-1]+srf[1,num-1]
-            B_in_0=o[num-1]+srf[1,num-1]+sg[1,num-1]
-            mdl.add_if_then(pc[1,num-1,i]==1,C[1,num-1,i]==B_in_0-A_in_0)
-            mdl.add_if_then(pc[1,num-1,i]==0,C[1,num-1,i]==0)
-            mdl.add_constraints([C[1,num-1,i]<=(B_in_0-A_in_0)+M*(1-pc[1,num-1,i]),C[1,num-1,i]>=(B_in_0-A_in_0)-M*(1-pc[1,num-1,i]),
-            C[1,num-1,i]>=-M*pc[1,num-1,i],C[1,num-1,i]<=M*pc[1,num-1,i]])
-            inb=self._add_var_in_cons(
-                A=A_in_0,
-                B=B_in_0,
-                o=o,
-                r=srf[1],
-                g=sg[1],
-                t=np.array([d[j]/v*z[j] for j in range(num-1)]),
-                n=np.array([nt[1,j,i] for j in range(num)]),
-                k=num-2,
-                end=-1,
-                yp=np.array([yp[1,j,i] for j in range(num)]),
-                px=tau[1],
-                p=p,
-                pc=np.array([pc[1,j,i] for j in range(num)]),
-                C=[C[1,k,i] for k in range(num)],
-                inbound=[[A_in_0,B_in_0,o[0]+sg[1,num-1]]],
-                z=z
-            )
-            self.sum_in+=mdl.sum([C[1,k,i]*vol[1,k]*props[1][self.pcum[k]-1][i] for k in range(num)])
-            inbound_x.append(inb)
-
-        for k in range(num-1):
-            for v in range(lin_num):
-                mdl.add_constraints([-M*p[k+1] <= yp[0, k, v]-yp[0, k+1, v], yp[0, k, v]-yp[0, k+1, v] <= M*p[k+1]])
-                mdl.add_constraints([-M*p[k+1] <= yp[1, k, v]-yp[1, k+1, v], yp[1, k, v]-yp[1, k+1, v] <= M*p[k+1]])
-    
-
-    def _add_var_on_cons(self,A, B, o, r, g, t, n, k, end, yp, px, p,pc,C,onbound,z):
-        if k>=end:
-            self.md2.add_constraint(pc[k-1]==yp[k-1])
-            return onbound
-        else:
-            if p[k]==1:
-                A1=o[k]+r[k]+n[k]
-                B1=o[k]+r[k]+n[k]+g[k]
-            else:
-                A1=self.md2.max(A+t[k-1]-px[k-1],o[k]+r[k]+n[k])
-                B1=self.md2.min(B+t[k-1], o[k]+r[k]+n[k]+g[k])
-
-            self.md2.add_if_then(pc[k]==1,C[k]==B1-A1)
-            self.md2.add_if_then(pc[k]==0,C[k]==0)
-
-            self.md2.add_constraints([self.be*z[k]-self.M*(1-yp[k]) <= B1-A1, B1-A1 <= g[k]+self.M*(1-yp[k])])
-            self.md2.add_constraints([p[k]>=pc[k-1],yp[k-1]>=pc[k-1],pc[k-1]>=p[k]+yp[k-1]-1])
-            onbound.append([A1,B1,B1-A1])
-            return self._add_var_on_cons(A1, B1, o, r, g, t, n, k+1, end, yp, px, p,pc,C,onbound,z)
-
-    def _add_var_in_cons(self,A, B, o, r, g, t, n, k, end, yp, px, p,pc,C,inbound,z):
-        if k<=end:
-            self.md2.add_constraints([p[k+1]>=pc[k+1],yp[k+1]>=pc[k+1],p[k+1]+yp[k+1]-1<=pc[k+1]])
-            return inbound
-        else:
-            A1=self.md2.max(A+t[k]-px[k],o[k]+r[k]+n[k])
-            B1=self.md2.min(B+t[k], o[k]+r[k]+n[k]+g[k])
-
-            self.md2.add_constraints([self.be*z[k]-self.M*(1-yp[k]) <= B1-A1, B1-A1 <= g[k]+self.M*(1-yp[k])])
-            self.md2.add_constraints([p[k+1]>=pc[k+1],yp[k+1]>=pc[k+1],p[k+1]+yp[k+1]-1<=pc[k+1]])
-
-            self.md2.add_if_then(pc[k]==1,C[k]==B1-A1)
-            self.md2.add_if_then(pc[k]==0,C[k]==0)
-            inbound.append([A1,B1,B1-A1])
-            if p[k]==1:
-                A1=o[k]+r[k]+n[k]+px[k]
-                B1=o[k]+r[k]+n[k]+g[k]
-            return self._add_var_in_cons(A1, B1, o, r, g, t, n, k-1, end, yp, px, p,pc,C,inbound,z)
-    
-
-    def get_dw_max(self):
-        num,qb,qb_x,dwt,sg,cap,cycle=self.num,self.qb,self.qb_x,self.dwt,self.sg,self.cap,self.cycle
-        a_max=[[],[]]
-        for i in range(num):
-            cc=cycle.mean()
-            dtm=max_dt(c=cc,dw=dwt/cc,q1=qb_x[0,i],q2=qb[0],g=sg[0,i],capacity=cap[0,i])
-            tmp=dtm.solve()[0]
-            a_max[0].append(tmp*cc)
-            dtm=max_dt(dw=dwt/120,q1=qb_x[1,i],q2=qb[0],g=sg[1,i],capacity=cap[1,i])
-            tmp=dtm.solve()[0]
-            a_max[1].append(tmp*cc)
-        self.dwm=np.array(a_max)
-        print(self.dwm)
-
-    
-    def getprop(self,linspace1,linspace2,mu,sigma):
-        t1=stats.norm(mu,sigma).cdf(linspace1)
-        t2=stats.norm(mu,sigma).cdf(linspace2)
-        return t2-t1
-
-    def GetProporation(self,mu,sigma):
-        return self.getprop(self.lin-0.25,self.lin+0.25,mu,sigma).round(4)
-
-    def _add_M2_obj(self):
-        mdl=self.md2
-        self.sum_b2 = mdl.sum([self.pv[i] * self.b2[i, k] for i in range(self.numr) for k in range(self.num)])
-        self.sum_u2 = mdl.sum([self.pv[i] * self.u2[i, k] for i in range(self.numr) for k in range(self.num)])
-        self.sum_bb2= mdl.sum_vars(self.bb2)*self.qb[0]
-        self.sum_v = self.sum_in+self.sum_on
-    
-    def _M2_solve(self):
-        self._add_M2_car_variables()
-        self._add_M2_bus_variables()
-        self._add_M2_car_constraints()
-        self._add_M2_bus_constraints()
-        self._add_M2_spd_constraints()
-        self._add_M2_obj()
-
-        mdl,sum_b,sum_u,sum_bb,sum_v=self.md2,self.sum_b2,self.sum_u2,self.sum_bb2,self.sum_v
-    
-        refiner=ConflictRefiner()
-        res=refiner.refine_conflict(mdl)
-        res.display()
-
-        mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u,sum_v],priorities=[2,2,1],weights=[5,-4,1])
-        # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
-        self.solution = mdl.solve(log_output=True)
-        print(self.solution.solve_details)
-        print("object value",self.solution.objective_value)
-
-    def solve(self):
-        self._M1_solve()
-        self._M2_solve()
-
-    def _get_M2_result(self):
-        sol=self.solution
-        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self.b2,self.o2,self.u2,self.n2,self.yp,self.pc,self.nt,self.C,\
-        self.bb2,self.wb2,self.nb2,self.w2
         o = sol.get_value_dict(o)
         w = sol.get_value_dict(w)
         n = sol.get_value_dict(n)
         u = sol.get_value_dict(u)
         b = sol.get_value_dict(b)
-        yp = sol.get_value_dict(yp)
-        pc=sol.get_value_dict(pc)
-        nt=sol.get_value_dict(nt)
-        C=sol.get_value_dict(C)
         bb=sol.get_value_dict(bb)
         wb=sol.get_value_dict(wb)
         nb=sol.get_value_dict(nb)
-        return b,o,u,n,yp,pc,nt,C,bb,wb,nb,w
+        return z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb
+    
     def get_dataframe(self):
         num,numr,d,dwt=self.num,self.numr,self.d,self.dwt
-        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self._get_M2_result()
-        z,t,p,y,dw,tb=self._get_M1_result()
+        z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
         Df=[[i for i in range(1,num+1)]]
         Df+=[[d[i] for i in range(num-1)] + [np.nan]]
         Df+=[[b[i,k] for k in range(num)] for i in range(numr)]
@@ -673,8 +289,6 @@ class LMband():
         cols+=["y"+str(i) for i in range(1,numr+1)]
         cols+=["z"]
         cols+=["u"+str(i) for i in range(1,numr+1)]
-        # cols+=["yp_on_"+str(i) for i in range(1,lin_num+1)]
-        # cols+=["yp_in_"+str(i) for i in range(1,lin_num+1)]
 
         cols+=["bb"+str(i) for i in range(1,3)]
         cols+=["dw"+str(i) for i in range(1,3)]
@@ -689,12 +303,13 @@ class LMband():
             Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
         Df["bb1"]=Df.bb1*Df.z
         Df["bb2"]=Df.bb2*Df.z
+
         return Df
 
     def get_draw_dataframe(self):
         Df=self.get_dataframe()
         num,d,rf,srf,numr=self.num,self.d,self.rf,self.srf,self.numr
-        b,o,u,n,yp,pc,nt,C,bb,wb,nb,w=self._get_M2_result()
+        z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
         Df2 = Df.copy()
         for i in range(numr):
             Df2["w"+str(i+1)]=[w[i, k] for k in range(num)]

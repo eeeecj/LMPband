@@ -7,13 +7,12 @@ import seaborn as sns
 import matplotlib.patches as pch
 import matplotlib.pyplot as plt
 
-class Multiband():
-    def __init__(self,phase,cycle,sgt,p,d,low,up,lowv, upv,vol,tau) -> None:
+class MXband():
+    def __init__(self,phase,cycle,sgt,d,low,up,lowv, upv,vol,tau) -> None:
         self.model=md.Model("Multiband")
         self.phase=phase
         self.sgt=sgt
         self.cycle=cycle
-        self.p=p
         self.d=d
         self.low=low
         self.up=up
@@ -65,6 +64,9 @@ class Multiband():
 
         var_list_u=[(i,j) for i in range(2) for j in range(num)]
         self.u=model.continuous_var_dict(var_list_u,lb=0,ub=1,name='u')
+
+        var_list_p=[(i) for i in range(num)]
+        self.p=model.binary_var_dict(var_list_p,name="p")
     def _add_constraints(self):
         model,num,w,t,d,scp,spv,z=self.model,self.num,self.w,self.t,self.d,self.spc,self.spv,self.z
         # 速度上下限约束
@@ -82,7 +84,10 @@ class Multiband():
 
         nx,u,p,b,sg,be,o,srf,n,tau=self.nx,self.u,self.p,self.b,self.sg,self.be,self.o,self.srf,self.n,self.tau
         M=self.M
-        print(num,len(p))
+
+        for k in range(num-1):
+            model.add_constraint(p[k] + p[k + 1] <= 1)
+
         for k in range(num):
             for i in range(2):
                 model.add_constraints([nx * p[k] <= u[i, k], u[i, k] <= p[k]])
@@ -110,9 +115,10 @@ class Multiband():
             model.add_constraint(z[k + 1] - z[k] <= M * p[k + 1])
 
     def _add_obj(self):
-        model,b=self.model,self.b
-        sum_e=model.sum_vars(b)
-        model.maximize(sum_e)
+        model,b,u=self.model,self.b,self.u
+        self.sum_b=model.sum_vars(b)
+        self.sum_u = self.model.sum([self.vol[i,k] * self.u[i, k] for i in range(2) for k in range(self.num)])
+        self.sum_p = self.model.sum([self.p[k] * (self.vol[0, k] + self.vol[1, k]) for k in range(self.num)])
         
     def _solve(self):
         self._add_variables()
@@ -123,12 +129,14 @@ class Multiband():
         res=refiner.refine_conflict(self.model)
         res.display()
 
-        self.sol=self.model.solve()
+        model,sum_b,sum_u,sum_p=self.model,self.sum_b,self.sum_u,self.sum_p
+        model.set_multi_objective("max",[sum_b,sum_u,sum_p],weights=[5,-4,-2])
+        self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)
 
     def _get_result(self):
-        sol,o,w,n,t,b,u,z=self.sol,self.o,self.w,self.n,self.t,self.b,self.u,self.z
+        sol,o,w,n,t,b,u,z,p=self.sol,self.o,self.w,self.n,self.t,self.b,self.u,self.z,self.p
         o=sol.get_value_dict(o)
         w=sol.get_value_dict(w)
         n=sol.get_value_dict(n)
@@ -136,11 +144,12 @@ class Multiband():
         b=sol.get_value_dict(b)
         u=sol.get_value_dict(u)
         z=sol.get_value_dict(z)
-        return o,w,n,t,b,u,z
+        p=sol.get_value_dict(p)
+        return o,w,n,t,b,u,z,p
     
     def get_dataframe(self):
-        num,d,p,sg,srf=self.num,self.d,self.p,self.sg,self.srf
-        o,w,n,t,b,u,z=self._get_result()
+        num,d,sg,srf=self.num,self.d,self.sg,self.srf
+        o,w,n,t,b,u,z,p=self._get_result()
         Df=[[i for i in range(1,num+1)]]
         Df+=[[d[i] for i in range(num-1)] + [np.nan]]
         Df+=[[sg[i,k] for k in range(num)] for i in range(2) ]
@@ -218,19 +227,31 @@ class Multiband():
                     if green_time[j,i] == 0:
                         continue
                     else:
-                        legend=ax1.add_patch(
-                           plt.Rectangle(
-                                (offset_r, sum(Df.distance[0:i])),
-                                green_time[j, i],
-                                20,
-                                facecolor=color[j]["color"],
-                                hatch=color[j]["hatch"],
-                                fill=color[j]["fill"],
-                                edgecolor='black',
-                                linewidth=0.5
+                        if self.sgt[0,i,j]==1:
+                            legend=ax1.add_patch(
+                            plt.Rectangle(
+                                    (offset_r, sum(Df.distance[0:i])),
+                                    green_time[j, i],
+                                    20,
+                                    facecolor="g",
+                                    edgecolor='black',
+                                    linewidth=0.5
+                                )
                             )
-                        )
-                        legends.append(legend)
+                            legends.append(legend)
+                        # legend=ax1.add_patch(
+                        #    plt.Rectangle(
+                        #         (offset_r, sum(Df.distance[0:i])),
+                        #         green_time[j, i],
+                        #         20,
+                        #         facecolor=color[j]["color"],
+                        #         hatch=color[j]["hatch"],
+                        #         fill=color[j]["fill"],
+                        #         edgecolor='black',
+                        #         linewidth=0.5
+                        #     )
+                        # )
+                        # legends.append(legend)
                         offset_r += green_time[j,i]
             ax1.text(10, sum(Df.distance[0:i]) + 25, "S"+str(i + 1), fontsize=16)
             

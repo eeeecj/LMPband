@@ -48,13 +48,13 @@ class Multiband():
         self.z = model.continuous_var_dict(
         Z_list, lb=1/cycle[1], ub=1/cycle[0], name="z")
         
-        var_list_w=[(i,j) for i in range(4)  for j in range(num)]
+        var_list_w=[(i,j) for i in range(2)  for j in range(num)]
         self.w=model.continuous_var_dict(var_list_w,lb=0,ub=1,name='w')
 
-        var_list_b=[(i,j) for i in range(4) for j in range(num)]
+        var_list_b=[(i,j) for i in range(2) for j in range(num)]
         self.b=model.continuous_var_dict(var_list_b,lb=0,ub=1,name='b')
 
-        var_list_n=[(i,j) for i in range(4) for j in range(num)]
+        var_list_n=[(i,j) for i in range(2) for j in range(num)]
         self.n=model.integer_var_dict(var_list_n,lb=0,ub=10,name='n')
 
         var_list_o=[(i) for i in range(num)]

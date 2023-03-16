@@ -130,7 +130,7 @@ class MXband():
         res.display()
 
         model,sum_b,sum_u,sum_p=self.model,self.sum_b,self.sum_u,self.sum_p
-        model.set_multi_objective("max",[sum_b,sum_u,sum_p],weights=[0.625,-0.25,-0.125])
+        model.set_multi_objective("max",[sum_b,sum_u,sum_p],weights=[0.75,-0.15,-0.05])
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)
@@ -174,8 +174,8 @@ class MXband():
         Df["offset"] = Df.offset * Df.z
         Df["t1"] = Df.t1 * Df.z
         Df["t2"] = Df.t2 * Df.z
-        for i in range(2):
-            Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
+        # for i in range(2):
+        #     Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
         for i in range(2):
             Df["w"+str(i+1)]=[w[i, k] for k in range(num)]
             Df["car_t"+str(i+1)]=Df.offset + srf[i] * Df.z  +Df.loc[:,"w"+str(i+1)] * Df.z - Df.loc[:,"b"+str(i+1)]/ 2 

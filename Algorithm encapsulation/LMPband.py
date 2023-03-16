@@ -192,7 +192,7 @@ class LMPband():
         dw_list=[(i, k) for i in range(2) for k in range(num-1)]
         self.dw=model.continuous_var_dict(dw_list,lb=0,ub=1,name="dw")
         tb_list=[(i, k) for i in range(2) for k in range(num-1)]
-        self.tb=model.continuous_var_dict(tb_list,lb=0,ub=1,name="tb")
+        self.tb=model.continuous_var_dict(tb_list,lb=0,name="tb")
         rt_list=[(i, k) for i in range(2) for k in range(num)]
         self.rt=model.continuous_var_dict(rt_list,lb=0,ub=1,name="rt")
         rtb_list=[(i, k) for i in range(2) for k in range(num)]

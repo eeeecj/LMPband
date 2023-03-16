@@ -226,7 +226,7 @@ class LMband():
         dw_list=[(i, k) for i in range(2) for k in range(num-1)]
         self.dw=model.continuous_var_dict(dw_list,lb=0,ub=1,name="dw")
         tb_list=[(i, k) for i in range(2) for k in range(num-1)]
-        self.tb=model.continuous_var_dict(tb_list,lb=0,ub=1,name="tb")
+        self.tb=model.continuous_var_dict(tb_list,lb=0,name="tb")
         ub_list=[(i,k) for i in range(2) for k in range(num)]
         self.ub=model.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
     
@@ -435,19 +435,8 @@ class LMband():
         for k in range(num-1):
             mdl.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
             mdl.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
-            # mdl.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k] <=
-            #                         o[k + 1] + srf[0, k+1] + wb[0, k + 1]+taub[0,k+1]+nb[0,k+1]+M*p[k+1])
-            # mdl.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k]  >=
-            #                         o[k + 1] + srf[0, k+1] + wb[0, k + 1]+taub[0,k+1]+nb[0, k+1]- M*p[k+1])
+
             mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
-
-
-            # mdl.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
-
-            # mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] >=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] - M * p[k+1] )
-            # mdl.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] <=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])
                 
             mdl.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
 

@@ -66,7 +66,7 @@ class Multiband():
         var_list_u=[(i,j) for i in range(2) for j in range(num)]
         self.u=model.continuous_var_dict(var_list_u,lb=0,ub=1,name='u')
     def _add_constraints(self):
-        model,num,w,t,d,scp,spv,z=self.model,self.num,self.w,self.t,self.d,self.spc,self.spv,self.z
+        model,num,w,t,d,scp,spv,z,rho=self.model,self.num,self.w,self.t,self.d,self.spc,self.spv,self.z,self.rho
         # 速度上下限约束
         for k in range(num-1):
             model.add_constraint(d[k] / scp[1] * z[k] <= t[0, k])
@@ -87,10 +87,10 @@ class Multiband():
             for i in range(2):
                 model.add_constraints([nx * p[k] <= u[i, k], u[i, k] <= p[k]])
 
-
+ 
         for i in range(num-1):
             model.add_constraints([b[0,i]/2-M*p[i+1]<=w[0,i+1],w[0,i+1]<=sg[0,i+1]-b[0,i]/2+M*p[i+1]])
-            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i],w[1,i]<=sg[1,i+1]-b[1,i+1]/2+M*p[i+1]])
+            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i],w[1,i]<=sg[1,i]-b[1,i+1]/2+M*p[i+1]])
             
         for k in range(2):
             for i in range(num):
@@ -108,10 +108,11 @@ class Multiband():
         for k in range(num-1):
             model.add_constraint(-M * p[k + 1] <= z[k + 1] - z[k])
             model.add_constraint(z[k + 1] - z[k] <= M * p[k + 1])
-
+        for k in range(num):
+            model.add_constraint((1 - rho[k]) *b[1, k]>=(1 - rho[k])* rho[k]* b[0, k])
     def _add_obj(self):
-        model,b=self.model,self.b
-        sum_e=model.sum_vars(b)
+        model,b,vol,num=self.model,self.b,self.vol,self.num
+        sum_e=model.sum([b[i,k]*vol[i,k] for i in range(2) for k in range(num)])
         model.maximize(sum_e)
         
     def _solve(self):
@@ -165,8 +166,10 @@ class Multiband():
         Df["offset"] = Df.offset * Df.z
         Df["t1"] = Df.t1 * Df.z
         Df["t2"] = Df.t2 * Df.z
-        for i in range(2):
-            Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
+        # for i in range(2):
+        #     Df["sg"+str(i+1)]=Df.loc[:,"sg"+str(i+1)]*Df.z
+        # for i in range(2):
+        #     Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
         for i in range(2):
             Df["w"+str(i+1)]=[w[i, k] for k in range(num)]
             Df["car_t"+str(i+1)]=Df.offset + srf[i] * Df.z  +Df.loc[:,"w"+str(i+1)] * Df.z - Df.loc[:,"b"+str(i+1)]/ 2 

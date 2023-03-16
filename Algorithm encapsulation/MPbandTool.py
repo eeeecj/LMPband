@@ -7,9 +7,9 @@ import seaborn as sns
 import matplotlib.patches as pch
 import matplotlib.pyplot as plt
 
-class MPband():
+class MPbandTool():
     def __init__(self,phase, cycle, vol, pv, pg, d, sgt, ison, tau, taub, qb, low, up, be, lowv, upv,
-                 ex, dwt,lowb,upb,lowbv,upbv,p) -> None:
+                 ex, dwt,lowb,upb,lowbv,upbv,p,o,z,t) -> None:
         self.d = d  # 交叉口间距
         self.phase = phase  # 相位时长
         self.cycle = np.array(cycle)  # 信号周期
@@ -24,6 +24,9 @@ class MPband():
         self.ex = ex  # 公交车站
         self.dwt = dwt  # 平均停靠时间
         self.p=p
+        self.o=o
+        self.z=z
+        self.t=t
 
         self.rho = self.vol[0]/self.vol[1]
         self.num = len(self.vol[0])
@@ -58,12 +61,8 @@ class MPband():
     def _add_variables(self):
         model, num, numr, cycle = self.model, self.num, self.numr, self.cycle
         #   公共变量
-        Z_list = [(i) for i in range(num)]
-        self.z = model.continuous_var_dict(Z_list, lb=1/cycle[1], ub=1/cycle[0], name="z")
-        o_list = [(i) for i in range(num)]
-        self.o = model.continuous_var_dict(o_list, lb=0, ub=1, name="o")
-        t_list = [(i, k) for i in range(2) for k in range(num-1)]
-        self.t = model.continuous_var_dict(t_list, lb=0, name="t")
+        # t_list = [(i, k) for i in range(2) for k in range(num-1)]
+        # self.t = model.continuous_var_dict(t_list, lb=0, name="t")
 
         w_list = [(i, k) for i in range(numr) for k in range(num)]
         self.w = model.continuous_var_dict(w_list, lb=0, ub=1, name="w")
@@ -87,20 +86,20 @@ class MPband():
                 model.add_constraint(b[i, k] / 2 <= w[i, k])
                 model.add_constraint(w[i, k] <= g[i][k] - b[i, k] / 2)
         # 速度上下限约束
-        for k in range(num-1):
-            model.add_constraint(d[k] / scp[1] * z[k] <= t[0, k])
-            model.add_constraint(t[0, k] <= d[k] / scp[0] * z[k])
-            model.add_constraint(d[k] / scp[1] * z[k] <= t[1, k])
-            model.add_constraint(t[1, k] <= d[k] / scp[0] * z[k])
-        #速度波动约束
-        for k in range(num-2):
-            model.add_constraint(d[k] / spv[0] * z[k] <=d[k] / d[k+1] * t[0, k + 1] - t[0, k])
-            model.add_constraint(d[k]/d[k+1] * t[0, k + 1] - t[0, k] <= d[k] / spv[1] * z[k])
-            model.add_constraint(d[k] / spv[0] * z[k] <=d[k]/d[k+1] * t[1, k + 1] - t[1, k])
-            model.add_constraint(d[k]/d[k+1] * t[1, k + 1] - t[1, k] <= d[k] / spv[1] * z[k])
+        # for k in range(num-1):
+        #     model.add_constraint(d[k] / scp[1] * z[k] <= t[0, k])
+        #     model.add_constraint(t[0, k] <= d[k] / scp[0] * z[k])
+        #     model.add_constraint(d[k] / scp[1] * z[k] <= t[1, k])
+        #     model.add_constraint(t[1, k] <= d[k] / scp[0] * z[k])
+        # #速度波动约束
+        # for k in range(num-2):
+        #     model.add_constraint(d[k] / spv[0] * z[k] <=d[k] / d[k+1] * t[0, k + 1] - t[0, k])
+        #     model.add_constraint(d[k]/d[k+1] * t[0, k + 1] - t[0, k] <= d[k] / spv[1] * z[k])
+        #     model.add_constraint(d[k] / spv[0] * z[k] <=d[k]/d[k+1] * t[1, k + 1] - t[1, k])
+        #     model.add_constraint(d[k]/d[k+1] * t[1, k + 1] - t[1, k] <= d[k] / spv[1] * z[k])
         # 子区内至少两个交叉口
-        for k in range(num-1):
-            model.add_constraint(p[k] + p[k + 1] <= 1)
+        # for k in range(num-1):
+        #     model.add_constraint(p[k] + p[k + 1] <= 1)
         # 子区分割等待时间
         for k in range(num):
             for i in range(numr):
@@ -111,7 +110,6 @@ class MPband():
                 model.add_constraint(be * z[k] - M * (1 - y[i, k]) <= b[i, k])
                 model.add_constraint(b[i, k] <= y[i, k])
 
-        model.add_constraint(o[0]==0)
         for i in range(numr):
             if ison[i]==0:
                 self.add_split_on_cons(i)
@@ -122,9 +120,9 @@ class MPband():
             model.add_constraint((1 - rho[k]) * model.sum([b[i, k]*(1-ison[i]) for i in range(numr)])>=\
                 (1 - rho[k])* rho[k]* model.sum([b[i, k]*ison[i] for i in range(numr)]))
         # 相同子区内周期相等
-        for k in range(num-1):
-            model.add_constraint(-M * p[k + 1] <= z[k + 1] - z[k])
-            model.add_constraint(z[k + 1] - z[k] <= M * p[k + 1])
+        # for k in range(num-1):
+        #     model.add_constraint(-M * p[k + 1] <= z[k + 1] - z[k])
+        #     model.add_constraint(z[k + 1] - z[k] <= M * p[k + 1])
 
     def add_split_on_cons(self, i):
         model, num, rf, M,tau,g= self.model, self.num, self.rf, self.M,self.tau,self.g
@@ -170,12 +168,14 @@ class MPband():
         self.tb=model.continuous_var_dict(tb_list,lb=0,name="tb")
         ub_list=[(i,k) for i in range(2) for k in range(num)]
         self.ub=model.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
+        yb_list=[(i,k) for i in range(2) for k in range(num)]
+        self.yb=model.binary_var_dict(yb_list,name="yb")
     
     def _add_bus_constaraints(self):
         z, o, tb, p, wb, bb, nb,dw = self.z, self.o, self.tb, self.p, self.wb, self.bb, self.nb,self.dw
         model, sg, d, srf, num, spcb, spvb, be, M, taub = self.model, self.sg, self.d, self.srf, self.num,\
              self.spcb, self.spvb,  self.be, self.M, self.taub
-        ison, nx, M,rho,ex ,dwt,ub= self.ison, self.nx, self.M,self.rho,self.ex,self.dwt,self.ub
+        ison, nx, M,rho,ex ,dwt,ub,yb= self.ison, self.nx, self.M,self.rho,self.ex,self.dwt,self.ub,self.yb
 
         for k in range(num-1):
             model.add_constraint(d[k] / spcb[1] * z[k] <= tb[0, k]-ex[k]*dwt*z[k]-dw[0,k])
@@ -201,7 +201,7 @@ class MPband():
                 model.add_constraint(wb[i,k]<=sg[i,k]-bb[i,k]/2)    
 
         for i in range(2):
-            model.add_constraints([bb[i,k]>=be*z[k] for k in range(num)])
+            model.add_constraints([bb[i,k]>=be*z[k]-M*(1-yb[i,k]) for k in range(num)])
 
         for k in range(num-1):
             for i in range(2):
@@ -210,10 +210,20 @@ class MPband():
         for k in range(num):
             for i in range(2):
                 model.add_constraints([nx * p[k] <= ub[i, k], ub[i, k] <= p[k]])
+        for i in range(2):
+            for k in range(num-1):
+                model.add_constraint(-M * p[k+1] <= yb[i, k + 1] - yb[i, k])
+                model.add_constraint(yb[i, k + 1] - yb[i, k] <= M * p[k+1])
 
         for k in range(num-1):
-            model.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
-            model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
+            model.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]>=
+                                 o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1]-M*(1-yb[0,k+1]))
+            model.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]<=
+                                 o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1]+M*(1-yb[0,k+1]))
+            model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]>=
+                                 o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1]-M*(1-yb[1,k+1]))
+            model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]<=
+                                 o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1]+M*(1-yb[1,k+1]))
 
             model.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
             model.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
@@ -229,6 +239,11 @@ class MPband():
         self._add_obj()
         model,sum_b,sum_bb=self.model,self.sum_b,self.sum_bb
         model.set_multi_objective("max",[sum_b+sum_bb],weights=[1])
+
+        refiner=ConflictRefiner()
+        res=refiner.refine_conflict(model)
+        res.display()
+
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)
@@ -237,12 +252,12 @@ class MPband():
     def _get_result(self):
         sol,z,t,p,y,dw,tb=self.sol,self.z,self.t,self.p,self.y,self.dw,self.tb
         o,w,n,u,b,bb,wb,nb=self.o,self.w,self.n,self.u,self.b,self.bb,self.wb,self.nb
-        z = sol.get_value_dict(z)
-        t = sol.get_value_dict(t)
+        # z = sol.get_value_dict(z)
+        # t = sol.get_value_dict(t)
         y = sol.get_value_dict(y)
         dw=sol.get_value_dict(dw)
         tb=sol.get_value_dict(tb)
-        o = sol.get_value_dict(o)
+        # o = sol.get_value_dict(o)
         w = sol.get_value_dict(w)
         n = sol.get_value_dict(n)
         u = sol.get_value_dict(u)
@@ -291,7 +306,8 @@ class MPband():
         Df["t2"] = Df.t2 * Df.z
         # for i in range(numr):
         #     Df["b"+str(i+1)]=Df.loc[:,"b"+str(i+1)]*Df.z
-
+        # Df["bb1"]=Df.bb1*Df.z
+        # Df["bb2"]=Df.bb2*Df.z
 
         return Df
 

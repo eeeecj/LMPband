@@ -312,6 +312,7 @@ class LMband():
         y = sol.get_value_dict(y)
         dw=sol.get_value_dict(dw)
         tb=sol.get_value_dict(tb)
+        print("M1",sol.get_value(self.sum_b),sol.get_value(self.sum_bb))
         
         return z,t,p,y,dw,tb
     
@@ -644,6 +645,7 @@ class LMband():
         bb=sol.get_value_dict(bb)
         wb=sol.get_value_dict(wb)
         nb=sol.get_value_dict(nb)
+        print("M2",sol.get_value(self.sum_bb),sol.get_value(self.sum_bb2))
         return b,o,u,n,yp,pc,nt,C,bb,wb,nb,w
     def get_dataframe(self):
         num,numr,d,dwt=self.num,self.numr,self.d,self.dwt
@@ -728,9 +730,9 @@ class LMband():
         phase,numr,num,pgt,ison,nump,g=self.phase,self.numr,self.num,self.pg,self.ison,self.nump,self.g
         green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
 
-        fig1 = plt.figure(figsize=(20, 20), dpi=300)
+        fig1 = plt.figure(figsize=(16, 16), dpi=300)
         ax1 = fig1.add_subplot()
-        legends = []
+        legends=[0 for i in range(nump)]
         color = colors
         on_count=0
         in_count=0
@@ -747,7 +749,7 @@ class LMband():
                 for j in range(num - 1, 0, -1):
                     Df2.loc[j-1,tmpstr] =self.data_formater(Df2.loc[j-1,tmpstr], Df2.loc[j,tmpstr], j - 1,Df2.z,g[i-1],Df2.t2)
         
-        max_width =max(Df2[["car_t"+str(i) for i in range(1,numr+1)]].max())+Df2.z.max()
+        max_width =max(Df2[["car_t"+str(i) for i in range(1,numr+1)]].max())
         max_hight = sum(Df2.distance[0 : num - 1]) + 100
         for i in range(0, num):
             offset_r = Df2.offset[i] - Df2.z[i]
@@ -769,9 +771,10 @@ class LMband():
                                 linewidth=0.5
                             )
                         )
-                        legends.append(legend)
+                        if legends[j]==0:
+                            legends[j]=legend
                         offset_r += green_time[j,i]
-            ax1.text(10, sum(Df2.distance[0:i]) + 25, "S"+str(i + 1), fontsize=16)
+            # ax1.text(10, sum(Df2.distance[0:i]) + 25, "S"+str(i + 1), fontsize=16)
         # plt.plot([0, 0], [0, max_hight])
 
         for idx in range(1,numr+1):
@@ -794,12 +797,13 @@ class LMband():
                         zip_x, zip_y = self.inbound(Df2.loc[i,bstr], Df2.loc[i,carstr], Df2.loc[i-1,tstr], dis, Df2.distance[i - 1])
                         inbound2 = ax1.add_patch(pch.Polygon(xy=list(zip(zip_x, zip_y)),fill=False,linewidth=1,linestyle=linestyles[idx-1]["linestyle"]))
 
-        plt.xlim([0,max_width,])
+        plt.xlim([0,max_width])
         plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
-        # ax2.set_xticks([])
-        # ax2.set_yticks([])
-        ax1.set_xticks([])
-        ax1.set_yticks([])
+        xticks=np.arange(0,max_width,Df2.loc[0,"z"])
+        yticks=[0]+Df2["distance"].cumsum().tolist()
+        plt.xticks(xticks,[i for i in range(len(xticks))],fontsize=20)
+        plt.yticks(yticks,["S"+str(i + 1) for i in range(len(yticks))],fontsize=20)
+
         ax1.legend(
             handles=legends,
             labels=[" "*10 for i in range(nump)],
@@ -814,9 +818,9 @@ class LMband():
         font1 = {'family': 'SimSun', 'size': 18, 'weight': 'normal'}
         bus_stop=[ex[i]*(sum(Df2.distance[0:i])+Df2.distance[i]*0.5) for i in range(0,num-1)]
         green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
-        fig1 = plt.figure(figsize=(20, 20), dpi=300)
+        fig1 = plt.figure(figsize=(16,16), dpi=300)
         ax1 = fig1.add_subplot()
-        legends=[]
+        legends=[0 for i in range(nump)]
 
         Df2.bus_t1 += Df2.z
         for i in range(1, num):
@@ -850,17 +854,10 @@ class LMband():
                                 linewidth=0.5
                             )
                         )
+                        if legends[j]==0:
+                            legends[j]=legend
                         offset_r += green_time[j,i]
                         legends.append(legend)
-            ax1.text(10, sum(Df2.distance[0:i]) + 25, "S"+str(i + 1), fontsize=18)
-            
-        plt.plot([0, 0], [0, max_hight])
-            #绘制公交车站
-        for i in range(0,num-1):
-            flag=bus_stop[i]
-            if flag!=0: 
-                plt.plot([-100,max_width],[bus_stop[i],bus_stop[i]],color=sns.color_palette('Greys',5)[3],linewidth=1)
-                ax1.text(0,bus_stop[i],'公交车站',fontdict=font1)
 
         for i in range(0,num-1):
             dis=sum(Df2.distance[0:i])
@@ -869,12 +866,13 @@ class LMband():
             else:
                 if bus_stop[i]>0:
                     bus_dis=(bus_stop[i]-dis)
-                    zip_x,zip_y=self.onbound(Df2.bb1[i],Df2.bus_t1[i],bus_dis/Df2.on_bus_v1[i],dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+                    zip_x1,zip_y1=self.onbound(Df2.bb1[i],Df2.bus_t1[i],bus_dis/Df2.on_bus_v1[i],dis,bus_dis)
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x1,zip_y1)),fill=False,linewidth=1))
 
-                    zip_x,zip_y=self.onbound(Df2.bb1[i],Df2.bus_t1[i]+bus_dis/Df2.on_bus_v1[i]+Df2.dw1[i],
+                    zip_x2,zip_y2=self.onbound(Df2.bb1[i],Df2.bus_t1[i]+bus_dis/Df2.on_bus_v1[i]+Df2.dw1[i],
                     bus_dis/Df2.on_bus_v1[i],dis+bus_dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x2,zip_y2)),fill=False,linewidth=1))
+                    plt.plot([zip_x1[3],zip_x2[1]],[zip_y1[3],zip_y2[1]],color='coral',linewidth=3)
                 else:
                     zip_x,zip_y=self.onbound(Df2.bb1[i],Df2.bus_t1[i],Df2.tb1[i],dis,Df2.distance[i])
                     ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
@@ -886,12 +884,13 @@ class LMband():
             else:
                 if bus_stop[i-1]>0:
                     bus_dis=dis-bus_stop[i-1]
-                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i],bus_dis/Df2.in_bus_v1[i-1],dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+                    zip_x1,zip_y1=self.inbound(Df2.bb2[i],Df2.bus_t2[i],bus_dis/Df2.in_bus_v1[i-1],dis,bus_dis)
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x1,zip_y1)),fill=False,linewidth=1))
 
-                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i]+bus_dis/Df2.in_bus_v1[i-1]+Df2.dw2[i-1],
+                    zip_x2,zip_y2=self.inbound(Df2.bb2[i],Df2.bus_t2[i]+bus_dis/Df2.in_bus_v1[i-1]+Df2.dw2[i-1],
                     bus_dis/Df2.in_bus_v1[i-1],dis-bus_dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
+                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x2,zip_y2)),fill=False,linewidth=1))
+                    legendx,=plt.plot([zip_x1[0],zip_x2[2]],[zip_y1[0],zip_y2[2]],color='coral',linewidth=3)
                 else:
                     zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i],Df2.tb2[i-1],dis,Df2.distance[i-1])
                     ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
@@ -899,13 +898,14 @@ class LMband():
 
         plt.xlim([0,max_width,])
         plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
-        # ax2.set_xticks([])
-        # ax2.set_yticks([])
-        ax1.set_xticks([])
-        ax1.set_yticks([])
+        xticks=np.arange(0,max_width,Df2.loc[0,"z"])
+        yticks=[0]+Df2["distance"].cumsum().tolist()
+        plt.xticks(xticks,[i for i in range(len(xticks))],fontsize=font1["size"])
+        plt.yticks(yticks,["S"+str(i + 1) for i in range(len(yticks))],fontsize=font1["size"])
+        legends.append(legendx)
         ax1.legend(
             handles=legends,
-            labels=[" "*10 for i in range(nump)],
+            labels=[" "*10 for i in range(nump)]+["bus station"],
             fontsize=20,
             loc="center right",
         )

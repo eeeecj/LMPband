@@ -60,7 +60,7 @@ class MXband():
         self.o=model.continuous_var_dict(var_list_o,lb=0,ub=1,name='o')
 
         var_list_t=[(i,j) for i in range(2) for j in range(num-1)]
-        self.t=model.continuous_var_dict(var_list_t,name='t')
+        self.t=model.continuous_var_dict(var_list_t,lb=0,name='t')
 
         var_list_u=[(i,j) for i in range(2) for j in range(num)]
         self.u=model.continuous_var_dict(var_list_u,lb=0,ub=1,name='u')
@@ -95,7 +95,7 @@ class MXband():
 
         for i in range(num-1):
             model.add_constraints([b[0,i]/2-M*p[i+1]<=w[0,i+1],w[0,i+1]<=sg[0,i+1]-b[0,i]/2+M*p[i+1]])
-            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i],w[1,i]<=sg[1,i+1]-b[1,i+1]/2+M*p[i+1]])
+            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i],w[1,i]<=sg[1,i]-b[1,i+1]/2+M*p[i+1]])
             
         for k in range(2):
             for i in range(num):

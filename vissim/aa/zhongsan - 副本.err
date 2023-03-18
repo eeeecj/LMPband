@@ -1,0 +1,129 @@
+Desired speed decision 50 is only 12.22 meter upstream of the next connector!
+Desired speed decision 52 is only 45.96 meter upstream of the next connector!
+Desired speed decision 51 is only 45.89 meter upstream of the next connector!
+Desired speed decision 905 is only 45.80 meter upstream of the next connector!
+Desired speed decision 161 is only 56.30 meter upstream of the next connector!
+Desired speed decision 160 is only 56.30 meter upstream of the next connector!
+Desired speed decision 916 is only 56.25 meter upstream of the next connector!
+Desired speed decision 210 is only 48.57 meter upstream of the next connector!
+Desired speed decision 212 is only 48.47 meter upstream of the next connector!
+Desired speed decision 211 is only 48.19 meter upstream of the next connector!
+Desired speed decision 190 is only 53.21 meter upstream of the next connector!
+Desired speed decision 919 is only 53.11 meter upstream of the next connector!
+Desired speed decision 921 is only 47.93 meter upstream of the next connector!
+Desired speed decision 192 is only 52.94 meter upstream of the next connector!
+Desired speed decision 191 is only 52.91 meter upstream of the next connector!
+Desired speed decision 62 is only 39.62 meter upstream of the next connector!
+Desired speed decision 906 is only 39.56 meter upstream of the next connector!
+Desired speed decision 61 is only 39.30 meter upstream of the next connector!
+Desired speed decision 60 is only 39.02 meter upstream of the next connector!
+Routing decision 26 is only 54.05 meter upstream of the next connector!
+Routing decision 4 is only 45.42 meter upstream of the next connector!
+Routing decision 14 is only 51.08 meter upstream of the next connector!
+Routing decision 16 is only 49.78 meter upstream of the next connector!
+Routing decision 20 is only 53.94 meter upstream of the next connector!
+Routing decision 13 is only 48.05 meter upstream of the next connector!
+Routing decision 41 is only 53.61 meter upstream of the next connector!
+Routing decision 10 is only 55.13 meter upstream of the next connector!
+Routing decision 23 is only 52.48 meter upstream of the next connector!
+Routing decision 3 is only 37.23 meter upstream of the next connector!
+Routing decision 19 is only 45.28 meter upstream of the next connector!
+Routing decision 18 is only 40.17 meter upstream of the next connector!
+Routing decision 25 is only 47.35 meter upstream of the next connector!
+Routing decision 27 is only 29.39 meter upstream of the next connector!
+Routing decision 7 is only 56.57 meter upstream of the next connector!
+Routing decision 56 is only 48.34 meter upstream of the next connector!
+Routing decision 48 is only 14.36 meter upstream of the next connector!
+Routing decision 47 is only 42.36 meter upstream of the next connector!
+Routing decision 46 is only 36.19 meter upstream of the next connector!
+Routing decision 29 is only 30.69 meter upstream of the next connector!
+Routing decision 8 is only 29.94 meter upstream of the next connector!
+Routing decision 37 is only 38.50 meter upstream of the next connector!
+Routing decision 43 is only 22.16 meter upstream of the next connector!
+Simulation time 472: Vehicle 2388 (on route 1 from
+  routing decision 25) reached the end of link 61
+  while searching for the next link (10100) of the route.
+Simulation time 475: Vehicle 1687 (on route 2 from
+  routing decision 49) reached the end of link 189
+  while searching for the next link (10277) of the route.
+Simulation time 500: Vehicle 2582 (on route 2 from
+  routing decision 10) reached the end of link 31
+  while searching for the next link (10031) of the route.
+Simulation time 979: Vehicle 3571 (on route 1 from
+  routing decision 4) reached the end of link 214
+  while searching for the next link (10423) of the route.
+Simulation time 1045: Vehicle 4047 (on route 1 from
+  routing decision 21) reached the end of link 58
+  while searching for the next link (10299) of the route.
+Simulation time 1053: Vehicle 5183 (on route 1 from
+  routing decision 44) reached the end of link 125
+  while searching for the next link (10226) of the route.
+Simulation time 1116: Vehicle 4477 (on route 1 from
+  routing decision 4) reached the end of link 214
+  while searching for the next link (10423) of the route.
+Simulation time 1126: Vehicle 4400 (on route 1 from
+  routing decision 21) reached the end of link 58
+  while searching for the next link (10299) of the route.
+Simulation time 1175: Vehicle 4863 (on route 1 from
+  routing decision 52) reached the end of link 174
+  while searching for the next link (10324) of the route.
+Simulation time 1283: Vehicle 6421 (on route 4 from
+  routing decision 55) reached the end of link 135
+  while searching for the next link (10330) of the route.
+Simulation time 1466: Vehicle 6860 (on route 1 from
+  routing decision 49) reached the end of link 189
+  while searching for the next link (10276) of the route.
+Simulation time 1564: Vehicle 8367 (on route 2 from
+  routing decision 34) reached the end of link 90
+  while searching for the next link (10174) of the route.
+Simulation time 1642: Vehicle 8762 (on route 2 from
+  routing decision 34) reached the end of link 90
+  while searching for the next link (10174) of the route.
+Simulation time 1662: Vehicle 8754 (on route 1 from
+  routing decision 34) reached the end of link 93
+  while searching for the next link (10187) of the route.
+Simulation time 1682: Vehicle 8981 (on route 4 from
+  routing decision 13) reached the end of link 37
+  while searching for the next link (10011) of the route.
+Simulation time 1745: Vehicle 8396 (on route 3 from
+  routing decision 40) reached the end of link 12
+  while searching for the next link (10217) of the route.
+Simulation time 1880: Vehicle 9175 (on route 4 from
+  routing decision 55) reached the end of link 189
+  while searching for the next link (10276) of the route.
+Simulation time 2092: Vehicle 11221 (on route 2 from
+  routing decision 34) reached the end of link 90
+  while searching for the next link (10174) of the route.
+Simulation time 2171: Vehicle 11197 (on route 3 from
+  routing decision 52) reached the end of link 174
+  while searching for the next link (10338) of the route.
+Simulation time 2198: Vehicle 11592 (on route 2 from
+  routing decision 42) reached the end of link 167
+  while searching for the next link (10230) of the route.
+Simulation time 2250: Vehicle 9329 (on route 5 from
+  routing decision 1) reached the end of link 9
+  while searching for the next link (10136) of the route.
+Simulation time 2341: Vehicle 9554 (on route 5 from
+  routing decision 1) reached the end of link 9
+  while searching for the next link (10136) of the route.
+Simulation time 2403: Vehicle 11091 (on route 5 from
+  routing decision 1) reached the end of link 39
+  while searching for the next link (10357) of the route.
+Simulation time 2453: Vehicle 11789 (on route 1 from
+  routing decision 44) reached the end of link 125
+  while searching for the next link (10226) of the route.
+Simulation time 2479: Vehicle 11909 (on route 1 from
+  routing decision 42) reached the end of link 167
+  while searching for the next link (10225) of the route.
+Simulation time 2483: Vehicle 10046 (on route 1 from
+  routing decision 4) reached the end of link 214
+  while searching for the next link (10423) of the route.
+Simulation time 2630: Vehicle 12767 (on route 3 from
+  routing decision 16) reached the end of link 150
+  while searching for the next link (10052) of the route.
+Simulation time 2713: Vehicle 13618 (on route 2 from
+  routing decision 32) reached the end of link 87
+  while searching for the next link (10167) of the route.
+Simulation time 2719: Vehicle 13110 (on route 5 from
+  routing decision 33) reached the end of link 72
+  while searching for the next link (10126) of the route.

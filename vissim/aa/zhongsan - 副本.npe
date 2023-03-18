@@ -1,0 +1,16 @@
+
+Network Performance
+
+File:     f:\workspace\jupyter\论文\graduation thesis\vissim\aa\zhongsan - 副本.inp
+Comment:  
+Date:     2023年3月18日 21:27:13
+
+Simulation time from 0.0 to 2913.0.
+
+ Parameter                                                             ;          Value;
+ Average delay time per vehicle [s], All Vehicle Types                 ;         74.133;
+ Average number of stops per vehicles, All Vehicle Types               ;          4.116;
+ Average speed [km/h], All Vehicle Types                               ;         22.494;
+ Average stopped delay per vehicle [s], All Vehicle Types              ;         53.336;
+ Total travel time [h], All Vehicle Types                              ;        845.867;
+ Number of vehicles in the network, All Vehicle Types                  ;       1230;

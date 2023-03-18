@@ -1,0 +1,27 @@
+
+Table of Travel Times
+
+File:     f:\workspace\jupyter\论文\graduation thesis\vissim\aa\zhongsan - 副本.inp
+Comment:  
+Date:     2023年3月18日 21:27:12
+
+No.    1 (path1               ): from link     1 at    2.8 m to link   172 at  486.1 mDistance 7561.8 m
+No.    2 (path2               ): from link     1 at    5.5 m to link    96 at  103.7 mDistance 3854.9 m
+No.    3 (path3               ): from link    44 at    7.7 m to link   172 at  476.0 mDistance 5753.8 m
+No.    4 (path4               ): from link   175 at    6.8 m to link    16 at  172.1 mDistance 7546.1 m
+No.    5 (path5               ): from link   175 at   11.1 m to link    92 at  158.5 mDistance 4063.0 m
+No.    6 (path6               ): from link    97 at    4.1 m to link    16 at  174.0 mDistance 3911.5 m
+No.    7 (bus1                ): from link     1 at    8.2 m to link   172 at  480.8 mDistance 7551.1 m
+No.    8 (bus2                ): from link   175 at   15.5 m to link    16 at  168.6 mDistance 7533.9 m
+
+  Time;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;
+  VehC;  Car;;       Car;;       All;;       All;;       All;;       All;;       Bus;;       Bus;;     
+  No.:;     1;   1;     2;   2;     3;   3;     4;   4;     5;   5;     6;   6;     7;   7;     8;   8;
+ Name;path1;path1;path2;path2;path3;path3;path4;path4;path5;path5;path6;path6;bus1;bus1;bus2;bus2;
+   600;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0; 430.6;   4; 561.0;   2;   0.0;   0;   0.0;   0;
+  1200;1032.7;   1; 691.6;  27; 812.9;  16;   0.0;   0; 494.6;  10; 678.2;  12;   0.0;   0;   0.0;   0;
+  1800;1230.8;  16; 715.2;  31; 885.0;  15;1406.8;   5; 542.8;  10; 831.2;  21;1522.5;   1;1577.4;   1;
+  2400;1304.1;  16; 754.0;  34; 929.5;  33;1482.9;   7; 535.2;  24; 910.1;  10;1392.4;   2;1421.9;   2;
+  3000;1325.6;  16; 752.6;  25; 951.0;  25;1557.8;   5; 519.7;   6;1082.6;   9;1359.5;   2;1403.7;   2;
+  3600;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
+  3600;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;

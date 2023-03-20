@@ -68,7 +68,7 @@ class Simulation():
     def set_randomseed(self,seed):
         self._check_vissim()
         sim=self.sim
-        sim.SetAttValue("RadomSeed",seed)
+        sim.SetAttValue("RandomSeed",seed)
     
     def set_dwelltime(self,dw):
         filepath=self.filepath
@@ -101,9 +101,9 @@ class Simulation():
         spds=self.spds
         for spd in spds:
             id=spd.ID
-            tp=id//100
+            tp=id//1000
             if tp==9:
-                crs=id%100
+                crs=(id%1000)//10
                 if crs<=12:
                     speed=bus_v[0,crs-1]*3.6//5
                     spd.SetAttValue("DESIREDSPEED",speed)
@@ -111,7 +111,7 @@ class Simulation():
                     speed=bus_v[1,crs-12-1]*3.6//5
                     spd.SetAttValue("DESIREDSPEED",speed)
             else:
-                crs=id//10
+                crs=id//100
                 if crs<=12:
                     speed=car_v[0,crs-1]*3.6//5
                     spd.SetAttValue("DESIREDSPEED",speed)
@@ -121,6 +121,9 @@ class Simulation():
 
     def start(self):
         sim=self.sim
+        vissim=self.vissim
+        vissim.SetWindow(0,0,100,100)
+        sim.SetAttValue("ReSolution",1)
         self._add_eva_config()
         sim.RunContinuous()
     def set_period(self,period):

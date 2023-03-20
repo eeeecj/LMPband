@@ -170,7 +170,6 @@ class MPband():
         self.tb=model.continuous_var_dict(tb_list,lb=0,name="tb")
         ub_list=[(i,k) for i in range(2) for k in range(num)]
         self.ub=model.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
-    
     def _add_bus_constaraints(self):
         z, o, tb, p, wb, bb, nb,dw = self.z, self.o, self.tb, self.p, self.wb, self.bb, self.nb,self.dw
         model, sg, d, srf, num, spcb, spvb, be, M, taub = self.model, self.sg, self.d, self.srf, self.num,\
@@ -221,7 +220,7 @@ class MPband():
         self.sum_b = self.model.sum([self.pv[i] * self.b[i, k] for i in range(self.numr) for k in range(self.num)])
         self.sum_bb = self.model.sum_vars(self.bb)*self.qb[0]
     
-    def _solve(self):
+    def _solve(self): 
         self._add_variables()
         self._add_car_constraints()
         self._add_bus_variables()

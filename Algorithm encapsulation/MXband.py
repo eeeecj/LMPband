@@ -118,7 +118,7 @@ class MXband():
         model=self.model
         self.sum_b=model.sum([self.vol[i,k] * self.b[i, k] for i in range(2) for k in range(self.num)])
         self.sum_u = self.model.sum([self.vol[i,k] * self.u[i, k] for i in range(2) for k in range(self.num)])
-        self.sum_p = self.model.sum([self.p[k] * (self.vol[0, k] + self.vol[1, k]) for k in range(self.num)])
+        self.sum_p = self.model.sum([self.p[k] * (self.vol[0, k] + self.vol[1, k])/2 for k in range(self.num)])
         
     def _solve(self):
         self._add_variables()
@@ -130,7 +130,7 @@ class MXband():
         res.display()
 
         model,sum_b,sum_u,sum_p=self.model,self.sum_b,self.sum_u,self.sum_p
-        model.set_multi_objective("max",[sum_b,sum_u,sum_p],weights=[0.75,-0.15,-0.05])
+        model.set_multi_objective("max",[sum_b,sum_u,sum_p],weights=[0.6,-0.35,-0.05])
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)

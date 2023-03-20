@@ -85,22 +85,7 @@ class MPbandTool():
             for i in range(numr):
                 model.add_constraint(b[i, k] / 2 <= w[i, k])
                 model.add_constraint(w[i, k] <= g[i][k] - b[i, k] / 2)
-        # 速度上下限约束
-        # for k in range(num-1):
-        #     model.add_constraint(d[k] / scp[1] * z[k] <= t[0, k])
-        #     model.add_constraint(t[0, k] <= d[k] / scp[0] * z[k])
-        #     model.add_constraint(d[k] / scp[1] * z[k] <= t[1, k])
-        #     model.add_constraint(t[1, k] <= d[k] / scp[0] * z[k])
-        # #速度波动约束
-        # for k in range(num-2):
-        #     model.add_constraint(d[k] / spv[0] * z[k] <=d[k] / d[k+1] * t[0, k + 1] - t[0, k])
-        #     model.add_constraint(d[k]/d[k+1] * t[0, k + 1] - t[0, k] <= d[k] / spv[1] * z[k])
-        #     model.add_constraint(d[k] / spv[0] * z[k] <=d[k]/d[k+1] * t[1, k + 1] - t[1, k])
-        #     model.add_constraint(d[k]/d[k+1] * t[1, k + 1] - t[1, k] <= d[k] / spv[1] * z[k])
-        # 子区内至少两个交叉口
-        # for k in range(num-1):
-        #     model.add_constraint(p[k] + p[k + 1] <= 1)
-        # 子区分割等待时间
+
         for k in range(num):
             for i in range(numr):
                 model.add_constraints([nx * p[k] <= u[i, k], u[i, k] <= p[k]])
@@ -119,10 +104,6 @@ class MPbandTool():
         for k in range(num):
             model.add_constraint((1 - rho[k]) * model.sum([b[i, k]*(1-ison[i]) for i in range(numr)])>=\
                 (1 - rho[k])* rho[k]* model.sum([b[i, k]*ison[i] for i in range(numr)]))
-        # 相同子区内周期相等
-        # for k in range(num-1):
-        #     model.add_constraint(-M * p[k + 1] <= z[k + 1] - z[k])
-        #     model.add_constraint(z[k + 1] - z[k] <= M * p[k + 1])
 
     def add_split_on_cons(self, i):
         model, num, rf, M,tau,g= self.model, self.num, self.rf, self.M,self.tau,self.g
@@ -162,8 +143,6 @@ class MPbandTool():
         self.bb = model.continuous_var_dict(bb_list, lb=0, ub=1, name="bb")
         nb_list = [(i, k) for i in range(2) for k in range(num)]
         self.nb = model.integer_var_dict(nb_list, lb=0, ub=10, name="nb")
-        dw_list=[(i, k) for i in range(2) for k in range(num-1)]
-        self.dw=model.continuous_var_dict(dw_list,lb=0,ub=1,name="dw")
         tb_list=[(i, k) for i in range(2) for k in range(num-1)]
         self.tb=model.continuous_var_dict(tb_list,lb=0,name="tb")
         ub_list=[(i,k) for i in range(2) for k in range(num)]
@@ -172,27 +151,27 @@ class MPbandTool():
         self.yb=model.binary_var_dict(yb_list,name="yb")
     
     def _add_bus_constaraints(self):
-        z, o, tb, p, wb, bb, nb,dw = self.z, self.o, self.tb, self.p, self.wb, self.bb, self.nb,self.dw
+        z, o, tb, p, wb, bb, nb= self.z, self.o, self.tb, self.p, self.wb, self.bb, self.nb
         model, sg, d, srf, num, spcb, spvb, be, M, taub = self.model, self.sg, self.d, self.srf, self.num,\
              self.spcb, self.spvb,  self.be, self.M, self.taub
         ison, nx, M,rho,ex ,dwt,ub,yb= self.ison, self.nx, self.M,self.rho,self.ex,self.dwt,self.ub,self.yb
 
         for k in range(num-1):
-            model.add_constraint(d[k] / spcb[1] * z[k] <= tb[0, k]-ex[k]*dwt*z[k]-dw[0,k])
-            model.add_constraint(tb[0, k]-ex[k]*dwt*z[k]-dw[0,k] <= d[k] / spcb[0] * z[k])
+            model.add_constraint(d[k] / spcb[1] * z[k] <= tb[0, k]-ex[k]*dwt*z[k])
+            model.add_constraint(tb[0, k]-ex[k]*dwt*z[k] <= d[k] / spcb[0] * z[k])
 
-            model.add_constraint(d[k] / spcb[1] * z[k] <= tb[1, k]-ex[k]*dwt*z[k]-dw[1,k])
-            model.add_constraint(tb[1, k]-ex[k]*dwt*z[k]-dw[1,k] <= d[k] / spcb[0] * z[k])
+            model.add_constraint(d[k] / spcb[1] * z[k] <= tb[1, k]-ex[k]*dwt*z[k])
+            model.add_constraint(tb[1, k]-ex[k]*dwt*z[k]<= d[k] / spcb[0] * z[k])
 
         for k in range(num-2):
             model.add_constraint(d[k] / spvb[0] * z[k] <= 
-            d[k]/d[k+1]*(tb[0, k + 1]-ex[k+1]*dwt*z[k]-dw[0,k+1])- (tb[0, k]-ex[k]*dwt*z[k]-dw[0,k]))
-            model.add_constraint(d[k]/d[k+1]*(tb[0, k + 1]-ex[k+1]*dwt*z[k]-dw[0,k+1])- (tb[0, k]-ex[k]*dwt*z[k]-dw[0,k]) <=
+            d[k]/d[k+1]*(tb[0, k + 1]-ex[k+1]*dwt*z[k])- (tb[0, k]-ex[k]*dwt*z[k]))
+            model.add_constraint(d[k]/d[k+1]*(tb[0, k + 1]-ex[k+1]*dwt*z[k])- (tb[0, k]-ex[k]*dwt*z[k]) <=
             d[k] / spvb[1] * z[k])
 
             model.add_constraint(d[k] / spvb[0] * z[k] <=
-            d[k]/d[k+1]*(tb[1, k + 1]-ex[k+1]*dwt*z[k]-dw[1,k+1])- (tb[1, k]-ex[k]*dwt*z[k]-dw[1,k]))
-            model.add_constraint(d[k]/d[k+1]*(tb[1, k + 1]-ex[k+1]*dwt*z[k]-dw[1,k+1])-(tb[1, k]-ex[k]*dwt*z[k]-dw[1,k])<=
+            d[k]/d[k+1]*(tb[1, k + 1]-ex[k+1]*dwt*z[k])- (tb[1, k]-ex[k]*dwt*z[k]))
+            model.add_constraint(d[k]/d[k+1]*(tb[1, k + 1]-ex[k+1]*dwt*z[k])-(tb[1, k]-ex[k]*dwt*z[k])<=
             d[k] / spvb[1] * z[k])
 
         for k in range(num):
@@ -203,9 +182,6 @@ class MPbandTool():
         for i in range(2):
             model.add_constraints([bb[i,k]>=be*z[k]-M*(1-yb[i,k]) for k in range(num)])
 
-        for k in range(num-1):
-            for i in range(2):
-                model.add_constraint(dw[i,k]<=ex[k]*15*z[k])
 
         for k in range(num):
             for i in range(2):
@@ -227,6 +203,7 @@ class MPbandTool():
 
             model.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
             model.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
+
     def _add_obj(self):
         self.sum_b = self.model.sum([self.pv[i] * self.b[i, k] for i in range(self.numr) for k in range(self.num)])
         self.sum_bb = self.model.sum_vars(self.bb)*self.qb[0]
@@ -250,12 +227,12 @@ class MPbandTool():
 
 
     def _get_result(self):
-        sol,z,t,p,y,dw,tb=self.sol,self.z,self.t,self.p,self.y,self.dw,self.tb
+        sol,z,t,p,y,tb=self.sol,self.z,self.t,self.p,self.y,self.tb
         o,w,n,u,b,bb,wb,nb=self.o,self.w,self.n,self.u,self.b,self.bb,self.wb,self.nb
         # z = sol.get_value_dict(z)
         # t = sol.get_value_dict(t)
         y = sol.get_value_dict(y)
-        dw=sol.get_value_dict(dw)
+        # dw=sol.get_value_dict(dw)
         tb=sol.get_value_dict(tb)
         # o = sol.get_value_dict(o)
         w = sol.get_value_dict(w)
@@ -265,11 +242,11 @@ class MPbandTool():
         bb=sol.get_value_dict(bb)
         wb=sol.get_value_dict(wb)
         nb=sol.get_value_dict(nb)
-        return z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb
+        return z,t,p,y,tb,o,w,n,u,b,bb,wb,nb
     
     def get_dataframe(self):
         num,numr,d,dwt=self.num,self.numr,self.d,self.dwt
-        z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
+        z,t,p,y,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
         Df=[[i for i in range(1,num+1)]]
         Df+=[[d[i] for i in range(num-1)] + [np.nan]]
         Df+=[[b[i,k] for k in range(num)] for i in range(numr)]
@@ -281,7 +258,7 @@ class MPbandTool():
         Df+=[[u[i,k] for k in range(num)] for i in range(numr)]
         # Df+=[[yp[i,k,j] for k in range(num)] for j in range(lin_num) for i in range(2)]
         Df+=[[bb[i,k] for k in range(num)] for i in range(2)]
-        Df+=[[(dw[i,k])/z[k]+dwt for k in range(num-1)]+[np.nan] for i in range(2)]
+        # Df+=[[(dw[i,k])/z[k]+dwt for k in range(num-1)]+[np.nan] for i in range(2)]
         Df+=[[tb[i,k]/z[k] for k in range(num-1)]+[np.nan] for i in range(2)]
         Df=np.array(Df)
         Df=Df.T
@@ -296,7 +273,7 @@ class MPbandTool():
         cols+=["u"+str(i) for i in range(1,numr+1)]
 
         cols+=["bb"+str(i) for i in range(1,3)]
-        cols+=["dw"+str(i) for i in range(1,3)]
+        # cols+=["dw"+str(i) for i in range(1,3)]
         cols+=["tb"+str(i) for i in range(1,3)]
 
         Df.columns=cols
@@ -314,7 +291,7 @@ class MPbandTool():
     def get_draw_dataframe(self):
         Df=self.get_dataframe()
         num,d,rf,srf,numr=self.num,self.d,self.rf,self.srf,self.numr
-        z,t,p,y,dw,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
+        z,t,p,y,tb,o,w,n,u,b,bb,wb,nb=self._get_result()
         Df2 = Df.copy()
         for i in range(numr):
             Df2["w"+str(i+1)]=[w[i, k] for k in range(num)]

@@ -25,6 +25,7 @@ class SimAnalysis():
         vissim.set_desiredspeed(car_t,bus_t)
         vissim.set_vehInput(1)
         vissim.set_period(3600)
+        vissim.set_randomseed(42)
     def set_saturation(self,idx):
         vissim=self.vissim
         vissim.set_vehInput(idx)

@@ -3,24 +3,24 @@ Table of Travel Times
 
 File:     f:\workspace\jupyter\论文\graduation thesis\vissim\aa\zhongsan.inp
 Comment:  
-Date:     2023年3月18日 17:35:04
+Date:     2023年3月19日 21:39:37
 
-No.    1 (path1               ): from link     1 at    2.8 m to link   172 at  486.1 mDistance 7561.8 m
-No.    2 (path2               ): from link     1 at    5.5 m to link    84 at  147.8 mDistance 3256.4 m
+No.    1 (path1               ): from link     1 at    2.8 m to link   172 at  486.1 mDistance 7561.9 m
+No.    2 (path2               ): from link     1 at    5.5 m to link    96 at  103.7 mDistance 3855.1 m
 No.    3 (path3               ): from link    44 at    7.7 m to link   172 at  476.0 mDistance 5753.8 m
 No.    4 (path4               ): from link   175 at    6.8 m to link    16 at  172.1 mDistance 7546.1 m
 No.    5 (path5               ): from link   175 at   11.1 m to link    92 at  158.5 mDistance 4063.0 m
-No.    6 (path6               ): from link    97 at    4.1 m to link    16 at  174.0 mDistance 3911.6 m
-No.    7 (bus1                ): from link     1 at    8.2 m to link   172 at  480.8 mDistance 7551.1 m
+No.    6 (path6               ): from link    97 at    4.1 m to link    16 at  174.0 mDistance 3911.5 m
+No.    7 (bus1                ): from link     1 at    8.2 m to link   172 at  480.8 mDistance 7551.2 m
 No.    8 (bus2                ): from link   175 at   15.5 m to link    16 at  168.6 mDistance 7533.9 m
 
   Time;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;  Trav;#Veh;
   VehC;  Car;;       Car;;       All;;       All;;       All;;       All;;       Bus;;       Bus;;     
   No.:;     1;   1;     2;   2;     3;   3;     4;   4;     5;   5;     6;   6;     7;   7;     8;   8;
  Name;path1;path1;path2;path2;path3;path3;path4;path4;path5;path5;path6;path6;bus1;bus1;bus2;bus2;
-   600;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
-  1200;   0.0;   0;   0.0;   0;1054.7;   4;   0.0;   0; 758.9;   9;   0.0;   0;   0.0;   0;   0.0;   0;
-  1800;1427.5;   1;   0.0;   0;1135.9;  17;   0.0;   0; 755.3;   7;1394.6;   5;   0.0;   0;   0.0;   0;
+   600;   0.0;   0; 505.7;   2;   0.0;   0;   0.0;   0; 454.4;   2;   0.0;   0;   0.0;   0;   0.0;   0;
+  1200;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
+  1800;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
   2400;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
   3000;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;
   3600;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;   0.0;   0;

@@ -13,7 +13,7 @@ class Simulation():
     def init_vissim(self):
         filepath2=self.filepath2
         layout=self.layout
-        self.vissim=com.Dispatch("vissim.vissim")
+        self.vissim=com.Dispatch("vissim.vissim.430")
         self.vissim.LoadNet(filepath2)
         self.vissim.LoadLayout(layout)
         self.sim=self.vissim.Simulation

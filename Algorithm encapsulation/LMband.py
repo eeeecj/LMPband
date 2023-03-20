@@ -614,7 +614,9 @@ class LMband():
         self.solution = mdl.solve(log_output=True)
         print(self.solution.solve_details)
         print("object value",self.solution.objective_value)
-
+    def set_M2_time_limit(self,time):
+        mdl=self.md2
+        mdl.set_time_limit(time)
     def solve(self):
         self._M1_solve()
         self._M2_solve()
@@ -635,7 +637,7 @@ class LMband():
         bb=sol.get_value_dict(bb)
         wb=sol.get_value_dict(wb)
         nb=sol.get_value_dict(nb)
-        print("M2",sol.get_value(self.sum_bb),sol.get_value(self.sum_bb2))
+        # print("M2",sol.get_value(self.sum_bb),sol.get_value(self.sum_bb2))
         return b,o,u,n,yp,pc,nt,C,bb,wb,nb,w
     def get_dataframe(self):
         num,numr,d,dwt=self.num,self.numr,self.d,self.dwt

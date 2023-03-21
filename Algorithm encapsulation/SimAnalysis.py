@@ -20,7 +20,7 @@ class SimAnalysis():
             g=phase[id-1]*df.z[id-1]
             vissim.Set_SignalGroups(sgs,g)
         df["d"]=df.distance
-        car_t=np.array([df.d/df.t1,df.d/df.t2])
+        car_t=np.array([df.d/df.t1,df.d/df.t2])+3
         bus_t=np.array([df.d/(df.tb1-ex*df.dw1[:12]),df.d/(df.tb2-ex*df.dw2[:12])])
         vissim.set_desiredspeed(car_t,bus_t)
         vissim.set_vehInput(1)

@@ -203,9 +203,9 @@ class LMband():
         o, w, t, u, y, p,n,b = self.o, self.w, self.t, self.u, self.y, self.p,self.n,self.b
 
         for k in range(num-1):
-            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[0,k] >=
+            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] >=
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] - M * (1 - y[i, k+1]))
-            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[0,k] <=
+            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] <=
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] + M * (1 - y[i, k+1]))
 
 
@@ -271,19 +271,9 @@ class LMband():
 
         for k in range(num-1):
             model.add_constraint(o[k]+srf[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+srf[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
-            # model.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k] <=
-            #                         o[k + 1] + srf[0, k+1] + wb[0,k+1] + nb[0,k+1]+taub[0,k+1]+M*p[k+1])
-            # model.add_constraint(o[k] + srf[0, k] + wb[0, k] + tb[0, k]  >=
-            #                         o[k + 1] + srf[0, k+1] + wb[0, k + 1] + nb[0, k + 1]+taub[0,k+1]-M*p[k+1])
             model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
 
             model.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
-
-            # model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] >=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] - M * p[k+1] )
-            # model.add_constraint(o[k] + srf[1, k] + wb[1, k] + nb[1, k]+taub[1,k] <=
-            #                         o[k + 1] + srf[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])     
-            # model.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
 
     def _add_M1_obj(self):
         self.sum_b = self.model.sum([self.pv[i] * self.b[i, k] for i in range(self.numr) for k in range(self.num)])
@@ -558,7 +548,7 @@ class LMband():
             self.md2.add_if_then(pc[k]==0,C[k]==0)
             inbound.append([A1,B1,B1-A1])
             if p[k]==1:
-                A1=o[k]+r[k]+n[k]+px[k]
+                A1=o[k]+r[k]+n[k]
                 B1=o[k]+r[k]+n[k]+g[k]
             return self._add_var_in_cons(A1, B1, o, r, g, t, n, k-1, end, yp, px, p,pc,C,inbound,z)
     

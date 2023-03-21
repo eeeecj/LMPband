@@ -89,16 +89,18 @@ class Multiband():
 
  
         for i in range(num-1):
-            model.add_constraints([b[0,i]/2-M*p[i+1]<=w[0,i+1],w[0,i+1]<=sg[0,i+1]-b[0,i]/2+M*p[i+1]])
-            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i],w[1,i]<=sg[1,i]-b[1,i+1]/2+M*p[i+1]])
+            model.add_constraints([b[0,i]/2-M*p[i+1]<=w[0,i+1]-u[0,i+1]+tau[0,i+1],
+                                   w[0,i+1]+u[0,i+1]-tau[0,i+1]<=sg[0,i+1]-b[0,i]/2+M*p[i+1]])
+            model.add_constraints([b[1,i+1]/2-M*p[i+1]<=w[1,i]-u[1,i]+tau[1,i],
+                                  w[1,i]-u[1,i]+tau[1,i]<=sg[1,i]-b[1,i+1]/2+M*p[i+1]])
             
         for k in range(2):
             for i in range(num):
                 model.add_constraint(b[k,i]/2<=w[k,i])
                 model.add_constraint(w[k,i]<=sg[k,i]-b[k,i]/2)
     
-        for i in range(num):
-            model.add_constraints([b[j,i]>=be*z[i] for j in range(2)])
+        # for i in range(num):
+        #     model.add_constraints([b[j,i]>=be*z[i] for j in range(2)])
         
         model.add_constraint(o[0]==0)    
         for i in range(num-1):   

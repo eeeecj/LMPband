@@ -146,9 +146,9 @@ class MPband():
         o, w, t, u, y, p,n,b = self.o, self.w, self.t, self.u, self.y, self.p,self.n,self.b
 
         for k in range(num-1):
-            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[0,k] >=
+            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] >=
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] - M * (1 - y[i, k+1]))
-            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[0,k] <=
+            model.add_constraint(o[k] + rf[i, k] + w[i, k] + n[i, k]+tau[1,k] <=
                                  o[k + 1] + rf[i, k+1] + w[i, k + 1] + t[1, k] + u[i, k+1] + M * (1 - y[i, k+1]))
             
             model.add_constraint(-M * p[k+1] <= y[i, k + 1] - y[i, k])
@@ -199,8 +199,8 @@ class MPband():
                 model.add_constraint(bb[i,k]/2<=wb[i,k]) 
                 model.add_constraint(wb[i,k]<=sg[i,k]-bb[i,k]/2)    
 
-        for i in range(2):
-            model.add_constraints([bb[i,k]>=be*z[k] for k in range(num)])
+        # for i in range(2):
+        #     model.add_constraints([bb[i,k]>=be*z[k] for k in range(num)]) 
 
         for k in range(num-1):
             for i in range(2):

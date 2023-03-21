@@ -102,8 +102,8 @@ class MXband():
                 model.add_constraint(b[k,i]/2<=w[k,i])
                 model.add_constraint(w[k,i]<=sg[k,i]-b[k,i]/2)
     
-        for i in range(num):
-            model.add_constraints([b[j,i]>=be*z[i] for j in range(2)])
+        # for i in range(num):
+        #     model.add_constraints([b[j,i]>=be*z[i] for j in range(2)])
         
         model.add_constraint(o[0]==0)    
         for i in range(num-1):   

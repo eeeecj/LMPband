@@ -139,8 +139,8 @@ class LMPband():
         model,x,num,nump=self.model,self.x,self.num,self.nump
         for k in range(num):
             model.add_constraint(x[l,m,k]+x[n,m,k]==1)
-            model.add_constraints([x[nk,l,k]+x[m,nk,k]==1 for nk in range(nump) if nk!=l and nk!=m])
-            model.add_constraints([x[nk,m,k]+x[n,nk,k]==1 for nk in range(nump) if nk!=m and nk!=n])
+            model.add_constraints([x[l,nk,k]+x[nk,m,k]==1 for nk in range(nump) if nk!=l and nk!=m])
+            model.add_constraints([x[m,nk,k]+x[nk,n,k]==1 for nk in range(nump) if nk!=m and nk!=n])
 
     def _add_M1_car_constraints(self):
         model,num,t,z,d,spc,spv,x,numr,nump=self.model,self.num,self.t,self.z,self.d,self.spc,self.spv,self.x,self.numr,self.nump
@@ -165,7 +165,8 @@ class LMPband():
             model.add_constraints([x[l, n, k] >= x[l, m, k] + x[m, n, k] - 1 for l in range(nump) for m in range(nump)
                     for n in range(nump) if l != m and l != n and n != m ] )
             
-            model.add_constraints([x[nk,2,k]+x[3,nk,k]==1 for nk in range(nump) if nk!=2 and nk!=3])
+            model.add_constraint(x[2,3,k]==1)
+            model.add_constraints([x[2,nk,k]+x[nk,3,k]==1 for nk in range(nump) if nk!=2 and nk!=3])
 
         self._add_over_phase(0,1,2)
         self._add_over_phase(5,6,7)
@@ -334,7 +335,7 @@ class LMPband():
         res=refiner.refine_conflict(model)
         print(res.display())
 
-        model.set_multi_objective("max",[6*(sum_b+sum_bb)-3*sum_u-1*sum_p])
+        model.set_multi_objective("max",[5*(sum_b+sum_bb)-3*sum_u-2*sum_p])
         # model.maximize(sum_b * 5 - sum_u * 4 - sum_p * 1)
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
@@ -554,6 +555,7 @@ class LMPband():
             propt=self.get_spd_proporation(subcrs[i],False)
             pro=self.GetProporation(propt[0],propt[1])
             props[1].append(pro) 
+        print(props)
 
         for i,v in enumerate(linspace):
             A_on_0=o[0]+min(self.get_grf(x,phase,2,0,nump),self.get_grf(x,phase,3,0,nump))
@@ -631,8 +633,14 @@ class LMPband():
         self._add_M2_obj()
         mdl,sum_b,sum_u,sum_bb,sum_v,sum_p=self.mdl,self.sum_b2,self.sum_u2,self.sum_bb2,self.sum_v,self.sum_p2
         mdl=self.mdl
-        mdl.set_multi_objective("max",[6*(sum_b+sum_bb)-3*sum_u-1*sum_p,sum_v],priorities=[2,1],weights=[1,1])
+
+        refiner=ConflictRefiner()
+        res=refiner.refine_conflict(mdl)
+        print(res.display())
+
+        mdl.set_multi_objective("max",[5*(sum_b+sum_bb)-3*sum_u-2*sum_p,sum_v],priorities=[2,1],weights=[1,1])
         # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
+
         self.solution = mdl.solve(log_output=True)
         print(self.solution.solve_details)
         print("object value",self.solution.objective_value)
@@ -694,14 +702,28 @@ class LMPband():
         Df["bb1"]=Df.bb1*Df.z
         Df["bb2"]=Df.bb2*Df.z
         Df.round(2)
-        self.Df=Df
+        # self.Df=Df
         return Df
-    def get_phase(self):
-        phase=self.phase
+    def get_gst(self,phase,x):
+        tmp=[phase[np.where(x<x[k])].sum() for k in range(len(x))]
+        return tmp
+    def get_fphase(self):
+        phase,nump,num=self.phase,self.nump,self.num
         df=self.get_dataframe()
+        phase=np.array([phase[i]*df.z[i] for i in range(num)])
+        x=self.sol.get_value_dict(self.x)
+        x_list = np.array(
+            [x[l, m, k] for l in range(nump) for m in range(nump) for k in range(num)], dtype=int
+        ).reshape(nump, nump, num)
+        xl=np.array([x_list[:, :, i].sum(axis=0) for i in range(num)])
+
+        tmp=np.array([self.get_gst(phase[i],xl[i]) for i in range(num)])
+        return tmp
+        
     
     def get_draw_dataframe(self):
-        Df,num,numr=self.Df,self.num,self.numr
+        Df=self.get_dataframe()
+        num,numr=self.num,self.numr
         w,wb,u,d=self.w2,self.wb2,self.u2,self.d
         p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
         Df2 = Df.copy()

@@ -289,7 +289,7 @@ class LMband():
         self._add_M1_bus_constaraints()
         self._add_M1_obj()
         model,sum_b,sum_u,sum_p,sum_bb=self.model,self.sum_b,self.sum_u,self.sum_p,self.sum_bb
-        model.set_multi_objective("max",[5*(sum_b+sum_bb)-3*(sum_u)-2*sum_p])
+        model.set_multi_objective("max",[5*(sum_b+sum_bb)-4*(sum_u)-1*sum_p])
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
         print("object value:",self.sol.objective_value)
@@ -600,7 +600,7 @@ class LMband():
         res=refiner.refine_conflict(mdl)
         res.display()
 
-        mdl.set_multi_objective("max",[5*(sum_b+sum_bb)-3*(sum_u)-2*sum_p,sum_v],priorities=[2,1],weights=[1,1])
+        mdl.set_multi_objective("max",[5*(sum_b+sum_bb)-4*(sum_u)-2*sum_p,sum_v],priorities=[2,1],weights=[1,1])
         # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
         self.solution = mdl.solve(log_output=True)
         print(self.solution.solve_details)

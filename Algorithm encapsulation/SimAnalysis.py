@@ -6,7 +6,7 @@ import numpy as np
 
 
 class SimAnalysis():
-    def __init__(self,df,phase,ex,fileath1,layout,filepath2,fg=None) -> None:
+    def __init__(self,df,phase,ex,fileath1,layout,filepath2) -> None:
         vissim=Simulation(fileath1,layout,filepath2)
         self.vissim=vissim
         vissim.set_dwelltime(np.array([df.dw1,df.dw2]))
@@ -18,11 +18,7 @@ class SimAnalysis():
             vissim.set_cycle(sc,df.z[id-1])
             sgs=sc.SignalGroups
             g=phase[id-1]*df.z[id-1]
-            if fg is not None:
-                fgt=fg[id-1]
-            else:
-                fgt=None
-            vissim.Set_SignalGroups(sgs,g,fgt)
+            vissim.Set_SignalGroups(sgs,g)
         df["d"]=df.distance
         car_t=np.array([df.d/df.t1,df.d/df.t2])+3
         bus_t=np.array([df.d/(df.tb1-ex*df.dw1[:12]),df.d/(df.tb2-ex*df.dw2[:12])])

@@ -139,8 +139,8 @@ class LMPband():
         model,x,num,nump=self.model,self.x,self.num,self.nump
         for k in range(num):
             model.add_constraint(x[l,m,k]+x[n,m,k]==1)
-            model.add_constraints([x[l,nk,k]+x[nk,m,k]==1 for nk in range(nump) if nk!=l and nk!=m])
-            model.add_constraints([x[m,nk,k]+x[nk,n,k]==1 for nk in range(nump) if nk!=m and nk!=n])
+            model.add_constraints([x[nk,l,k]+x[m,nk,k]==1 for nk in range(nump) if nk!=l and nk!=m])
+            model.add_constraints([x[nk,m,k]+x[n,nk,k]==1 for nk in range(nump) if nk!=m and nk!=n])
 
     def _add_M1_car_constraints(self):
         model,num,t,z,d,spc,spv,x,numr,nump=self.model,self.num,self.t,self.z,self.d,self.spc,self.spv,self.x,self.numr,self.nump
@@ -165,8 +165,7 @@ class LMPband():
             model.add_constraints([x[l, n, k] >= x[l, m, k] + x[m, n, k] - 1 for l in range(nump) for m in range(nump)
                     for n in range(nump) if l != m and l != n and n != m ] )
             
-            model.add_constraint(x[2,3,k]==1)
-            model.add_constraints([x[2,nk,k]+x[nk,3,k]==1 for nk in range(nump) if nk!=2 and nk!=3])
+            model.add_constraints([x[nk,2,k]+x[3,nk,k]==1 for nk in range(nump) if nk!=2 and nk!=3])
 
         self._add_over_phase(0,1,2)
         self._add_over_phase(5,6,7)
@@ -254,15 +253,12 @@ class LMPband():
         self.rt=model.continuous_var_dict(rt_list,lb=0,ub=1,name="rt")
         rtb_list=[(i, k) for i in range(2) for k in range(num)]
         self.rtb=model.continuous_var_dict(rtb_list,lb=0,ub=1,name="rtb")
-
-        ub_list=[(i,k) for i in range(2) for k in range(num)]
-        self.ub=model.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
     
     def _add_M1_bus_constraints(self):
         model,num,d,spcb,spvb,tb,z,ex,dw,dwt=self.model,self.num,self.d,self.spcb,self.spvb,self.tb,\
         self.z,self.ex,self.dw,self.dwt
         rt,sgt,phase,nump,M,x,rtb,sg=self.rt,self.sgt,self.phase,self.nump,self.M,self.x,self.rtb,self.sg
-        wb,bb,be,o,nb,p,taub,ub,nx=self.wb,self.bb,self.be,self.o,self.nb,self.p,self.taub,self.ub,self.nx
+        wb,bb,be,o,nb,p,taub=self.wb,self.bb,self.be,self.o,self.nb,self.p,self.taub
 
         for k in range(num-1):
             model.add_constraint(d[k] / spcb[1] * z[k] <= tb[0, k]-ex[k]*dwt*z[k]-dw[0,k])
@@ -303,15 +299,19 @@ class LMPband():
             for i in range(2):
                 model.add_constraints([dw[i,k]<=ex[k]*15*z[k]])
 
-        for k in range(num):
-            for i in range(2):
-                model.add_constraints([nx * p[k] <= ub[i, k], ub[i, k] <= p[k]])
-        
         for k in range(num-1):
-            model.add_constraint(o[k]+rt[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+rt[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
-            model.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
+            model.add_constraint(o[k] + rt[0, k] + wb[0, k] + tb[0, k] <=
+                                    o[k + 1] + rt[0, k+1] + wb[0, k + 1] +taub[0,k+1]+ nb[0, k + 1]+M*p[k+1])
+            model.add_constraint(o[k] + rt[0, k] + wb[0, k] + tb[0, k]  >=
+                                    o[k + 1] + rt[0, k+1] + wb[0, k + 1] +taub[0,k+1]+ nb[0, k + 1] - M*p[k+1])
 
             model.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
+
+            model.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k] +taub[1,k]>=
+                                    o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k] - M * p[k+1] )
+            model.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k]+taub[1,k] <=
+                                    o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])
+                
             model.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
 
     def _add_M1_obj(self):
@@ -334,7 +334,7 @@ class LMPband():
         res=refiner.refine_conflict(model)
         print(res.display())
 
-        model.set_multi_objective("max",[5*(sum_b+sum_bb)-3*sum_u-2*sum_p])
+        model.set_multi_objective("max",[6*(sum_b+sum_bb)-3*sum_u-1*sum_p])
         # model.maximize(sum_b * 5 - sum_u * 4 - sum_p * 1)
         self.sol = model.solve(log_output=True)
         print(self.sol.solve_details)
@@ -442,12 +442,10 @@ class LMPband():
         self.bb2 = mdl.continuous_var_dict(bb_list, lb=0, ub=1, name="bb")
         nb_list = [(i, k) for i in range(2) for k in range(num)]
         self.nb2 = mdl.integer_var_dict(nb_list, lb=0, ub=10, name="nb")
-        ub_list=[(i,k) for i in range(2) for k in range(num)]
-        self.ub2=mdl.continuous_var_dict(ub_list,lb=0,ub=1,name="ub")
 
     def _add_M2_bus_constraints(self):
         mdl,num,bb,wb,sg,be=self.mdl,self.num,self.bb2,self.wb2,self.sg,self.be
-        o,nb,M,taub,ub,nx=self.o2,self.nb2,self.M,self.taub,self.ub2,self.nx
+        o,nb,M,taub=self.o2,self.nb2,self.M,self.taub
         p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
 
         for k in range(num):
@@ -458,17 +456,21 @@ class LMPband():
         # for i in range(2):
         #     mdl.add_constraints([bb[i,k]>=be*z[k] for k in range(num)])
 
-        for k in range(num):
-            for i in range(2):
-                mdl.add_constraints([nx * p[k] <= ub[i, k], ub[i, k] <= p[k]])
-
         for k in range(num-1):
-            mdl.add_constraint(o[k]+rt[0,k]+wb[0,k]+tb[0,k]+ub[0,k+1]==o[k+1]+rt[0,k+1]+wb[0,k+1]+nb[0,k+1]+taub[0,k+1])
+            mdl.add_constraint(o[k] + rt[0, k] + wb[0, k] + tb[0, k] <=
+                                    o[k + 1] + rt[0, k+1] + wb[0, k + 1]+taub[0,k+1] + nb[0, k + 1]+M*p[k+1])
+            mdl.add_constraint(o[k] + rt[0, k] + wb[0, k] + tb[0, k]  >=
+                                    o[k + 1] + rt[0, k+1] + wb[0, k + 1] +taub[0,k+1] + nb[0, k + 1] - M*p[k+1])
+
             mdl.add_constraints([bb[0,k]/2-M*p[k+1]<=wb[0,k+1],wb[0,k+1]<=sg[0,k+1]-bb[0,k]/2+M*p[k+1]])
 
-            mdl.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k]+taub[1,k]==o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k]+ub[1,k+1])
+            mdl.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k]+taub[1,k] >=
+                                    o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k] - M * p[k+1] )
+            mdl.add_constraint(o[k] + rt[1, k] + wb[1, k] + nb[1, k]+taub[1,k]  <=
+                                    o[k + 1] + rt[1, k+1] + wb[1, k + 1] + tb[1, k] + M * p[k+1])
                 
             mdl.add_constraints([bb[1,k+1]/2-M*p[k+1]<=wb[1,k],wb[1,k]<=sg[1,k]-bb[1,k+1]/2+M*p[k+1]])
+
 
     def get_dw_max(self):
         num,qb,qb_x,dwt,sg,cap,cycle=self.num,self.qb,self.qb_x,self.dwt,self.sg,self.cap,self.cycle
@@ -552,7 +554,6 @@ class LMPband():
             propt=self.get_spd_proporation(subcrs[i],False)
             pro=self.GetProporation(propt[0],propt[1])
             props[1].append(pro) 
-        print(props)
 
         for i,v in enumerate(linspace):
             A_on_0=o[0]+min(self.get_grf(x,phase,2,0,nump),self.get_grf(x,phase,3,0,nump))
@@ -630,20 +631,17 @@ class LMPband():
         self._add_M2_obj()
         mdl,sum_b,sum_u,sum_bb,sum_v,sum_p=self.mdl,self.sum_b2,self.sum_u2,self.sum_bb2,self.sum_v,self.sum_p2
         mdl=self.mdl
-
-        refiner=ConflictRefiner()
-        res=refiner.refine_conflict(mdl)
-        print(res.display())
-
-        mdl.set_multi_objective("max",[5*(sum_b+sum_bb)-3*sum_u-2*sum_p,sum_v],priorities=[2,1],weights=[1,1])
+        mdl.set_multi_objective("max",[6*(sum_b+sum_bb)-3*sum_u-1*sum_p,sum_v],priorities=[2,1],weights=[1,1])
         # mdl.set_multi_objective("max",[sum_b+sum_bb,sum_u],weights=[5,-4])
-
         self.solution = mdl.solve(log_output=True)
         print(self.solution.solve_details)
         print("object value",self.solution.objective_value)
-    def _get_M2_result(self):
+        
+    def get_dataframe(self):
         sol,o,w,n,u,b,yp,pc,nt,C,bb,wb,nb=self.solution,self.o2,self.w2,self.n2,self.u2,self.b2,self.yp,self.pc,\
         self.nt,self.C,self.bb2,self.wb2,self.nb2
+        num,numr,dwt,dw,d=self.num,self.numr,self.dwt,self.dw,self.d
+        p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
         o = sol.get_value_dict(o)
         w = sol.get_value_dict(w)
         n = sol.get_value_dict(n)
@@ -656,12 +654,6 @@ class LMPband():
         bb=sol.get_value_dict(bb)
         wb=sol.get_value_dict(wb)
         nb=sol.get_value_dict(nb)
-        return o,w,n,u,b,yp,pc,nt,C,bb,wb,nb
-
-    def get_dataframe(self):
-        num,numr,dwt,dw,d=self.num,self.numr,self.dwt,self.dw,self.d
-        p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
-        o,w,n,u,b,yp,pc,nt,C,bb,wb,nb=self._get_M2_result()
 
         Df=[[i for i in range(1,num+1)]]
         Df+=[[d[i] for i in range(num-1)] + [np.nan]]
@@ -702,16 +694,17 @@ class LMPband():
         Df["bb1"]=Df.bb1*Df.z
         Df["bb2"]=Df.bb2*Df.z
         Df.round(2)
+        self.Df=Df
         return Df
+    def get_phase(self):
+        phase=self.phase
+        df=self.get_dataframe()
     
     def get_draw_dataframe(self):
-        Df=self.get_dataframe()
-        num,numr,d=self.num,self.numr,self.d
+        Df,num,numr=self.Df,self.num,self.numr
+        w,wb,u,d=self.w2,self.wb2,self.u2,self.d
         p,t,y,z,r,x,rt,dw,tb=self._get_M1_result()
-        o,w,n,u,b,yp,pc,nt,C,bb,wb,nb=self._get_M2_result()
         Df2 = Df.copy()
-        r=np.array([[r[i,k] for k in range(num)]for i in range(numr)])
-        rt=np.array([[rt[i,k] for k in range(num)]for i in range(2)])
         for i in range(numr):
             Df2["w"+str(i+1)]=[w[i, k] for k in range(num)]
             Df2["u"+str(i+1)]=np.array([u[i, k] for k in range(num)]) * Df.z
@@ -719,239 +712,6 @@ class LMPband():
 
         Df2["wb1"]=[wb[0, k] for k in range(num)]
         Df2["wb2"]=[wb[1, k] for k in range(num)]
-
-        Df2["bus_t1"] =Df2.offset + rt[0] * Df2.z + Df2.wb1 * Df2.z - Df2.bb1 / 2
-        Df2["bus_t2"] =Df2.offset + rt[1] * Df2.z + Df2.wb2 * Df2.z - Df2.bb2 / 2
-        Df2['on_bus_v1']=[d[i]/(Df.tb1[i]-Df.dw1[i]) for i in range(num-1)]+[np.nan]
-        Df2['in_bus_v1']=[d[i]/(Df.tb2[i]-Df.dw2[i]) for i in range(num-1)]+[np.nan]
-        return Df2
-    
-
-    def get_gst(self,phase,x):
-        tmp=[phase[np.where(x<x[k])].sum() for k in range(len(x))]
-        return tmp
-    def get_fphase(self):
-        phase,nump,num=self.phase,self.nump,self.num
-        df=self.get_dataframe()
-        phase=np.array([phase[i]*df.z[i] for i in range(num)])
-        x=self.sol.get_value_dict(self.x)
-        x_list = np.array(
-            [x[l, m, k] for l in range(nump) for m in range(nump) for k in range(num)], dtype=int
-        ).reshape(nump, nump, num)
-        xl=np.array([x_list[:, :, i].sum(axis=0) for i in range(num)])
-
-        tmp=np.array([self.get_gst(phase[i],xl[i]) for i in range(num)])
-        return tmp
-        
-
-
-    def data_formater(self,data, last_data, cross_num,z,g,t):
-        while data < last_data+t[cross_num]-g[cross_num]/2*z[cross_num]:
-            data += z[cross_num]
-        return data
-
-    def onbound(self,b, car_t, t, dis, distance):
-        zip_x = [car_t,car_t + b,car_t + t + b,car_t + t,]
-        zip_y = [dis, dis, dis + distance, dis + distance]
-        return zip_x, zip_y
-
-    def inbound(self,b, car_t, t, dis, distance):
-        zip_x = [  car_t + t, car_t + t + b, car_t + b, car_t]
-        zip_y = [dis - distance, dis - distance, dis, dis]
-        return zip_x, zip_y
-    
-    def draw_car_bound(self,filepath,colors,legends,idx,linestyles):
-        Df2=self.get_draw_dataframe()
-        phase,numr,num,pgt,ison,nump,g=self.phase,self.numr,self.num,self.pgt,self.ison,self.nump,self.g
-        green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
-
-        x=self.sol.get_value_dict(self.x)
-        x_list = np.array(
-            [x[l, m, k] for l in range(nump) for m in range(nump) for k in range(num)], dtype=int
-        ).reshape(nump, nump, num)
-        xl=np.array([x_list[:, :, i].sum(axis=0).argsort() for i in range(num)])
-
-        fig1 = plt.figure(figsize=(16, 16), dpi=300)
-        ax1 = fig1.add_subplot()
-        legends=[0 for i in range(nump)]
-        color = colors
-        on_count=0
-        in_count=0
-        for i in range(1,numr+1):
-            tmpstr="car_t"+str(i)
-            if ison[i-1]==0:
-                Df2.loc[:,tmpstr]+=Df2.z*on_count
-                on_count+=1
-                for j in range(1, num):
-                    Df2.loc[j,tmpstr]=self.data_formater(Df2.loc[j,tmpstr], Df2.loc[j-1,tmpstr], j,Df2.z,g[i-1],Df2.t1)
-            else:
-                Df2.loc[:,tmpstr]+=Df2.z*in_count
-                in_count+=1
-                for j in range(num - 1, 0, -1):
-                    Df2.loc[j-1,tmpstr] =self.data_formater(Df2.loc[j-1,tmpstr], Df2.loc[j,tmpstr], j - 1,Df2.z,g[i-1],Df2.t2)
-        print(green_time)
-        max_width =max(Df2[["car_t"+str(i) for i in range(1,numr+1)]].max())
-        max_hight = sum(Df2.distance[0 : num - 1]) + 100
-        for i in range(0, num):
-            offset_r = Df2.offset[i] - Df2.z[i]
-            sum_dis = sum(Df2.distance[0:i])
-            while offset_r < max_width:
-                for j in xl[i]:
-                    if green_time[j,i] == 0:
-                        continue
-                    else:
-                        legend=ax1.add_patch(
-                           plt.Rectangle(
-                                (offset_r, sum(Df2.distance[0:i])),
-                                green_time[j, i],
-                                20,
-                                facecolor=color[j]["color"],
-                                hatch=color[j]["hatch"],
-                                fill=color[j]["fill"],
-                                edgecolor='black',
-                                linewidth=0.5
-                            )
-                        )
-                        if legends[j]==0:
-                            legends[j]=legend
-                        offset_r += green_time[j,i]
-            # ax1.text(10, sum(Df2.distance[0:i]) + 25, "S"+str(i + 1), fontsize=16)
-        # plt.plot([0, 0], [0, max_hight])
-
-        for idx in range(1,numr+1):
-            if ison[idx-1]==0:
-                for i in range(0, num):
-                    dis = sum(Df2.distance[0:i])
-                    if Df2.loc[i,"b"+str(idx)]== 0:
-                        continue
-                    else:
-                        bstr,carstr,tstr="b"+str(idx),"car_t"+str(idx),"t1"
-                        zip_x, zip_y = self.onbound(Df2.loc[i,bstr], Df2.loc[i,carstr], Df2.loc[i,tstr], dis, Df2.distance[i])
-                        onbound1 = ax1.add_patch(pch.Polygon(xy=list(zip(zip_x, zip_y)), fill=False,linewidth=1,linestyle=linestyles[idx-1]["linestyle"]))
-            else:
-                for i in range(1, num):
-                    dis = sum(Df2.distance[0:i])
-                    if Df2.loc[i,"b"+str(idx)] == 0:
-                        continue
-                    else:
-                        bstr,carstr,tstr="b"+str(idx),"car_t"+str(idx),"t2"
-                        zip_x, zip_y = self.inbound(Df2.loc[i,bstr], Df2.loc[i,carstr], Df2.loc[i-1,tstr], dis, Df2.distance[i - 1])
-                        inbound2 = ax1.add_patch(pch.Polygon(xy=list(zip(zip_x, zip_y)),fill=False,linewidth=1,linestyle=linestyles[idx-1]["linestyle"]))
-
-        plt.xlim([0,max_width])
-        plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
-        xticks=np.arange(0,max_width,Df2.loc[0,"z"])
-        yticks=[0]+Df2["distance"].cumsum().tolist()
-        plt.xticks(xticks,[i for i in range(len(xticks))],fontsize=20)
-        plt.yticks(yticks,["S"+str(i + 1) for i in range(len(yticks))],fontsize=20)
-
-        ax1.legend(
-            handles=legends,
-            labels=[" "*10 for i in range(nump)],
-            fontsize=20,
-            loc="center right",
-        )
-        fig1.savefig(filepath, bbox_inches="tight")
-
-    def draw_bus_bound(self,filepath,colors):
-        Df2=self.get_draw_dataframe()
-        ex,num,nump,sgt,phase,sg=self.ex,self.num,self.nump,self.sgt,self.phase,self.sg
-        font1 = {'family': 'SimSun', 'size': 18, 'weight': 'normal'}
-        bus_stop=[ex[i]*(sum(Df2.distance[0:i])+Df2.distance[i]*0.5) for i in range(0,num-1)]
-        green_time=np.array([phase[:, j] * Df2.z for j in range(nump)])
-        fig1 = plt.figure(figsize=(16,16), dpi=300)
-        ax1 = fig1.add_subplot()
-        legends=[0 for i in range(nump)]
-
-        Df2.bus_t1 += Df2.z
-        for i in range(1, num):
-            Df2.loc[i, "bus_t1"] = self.data_formater(Df2.bus_t1[i], Df2.bus_t1[i - 1], i,Df2.z,sg[0],Df2.tb1)
-
-        for i in range(num - 1, 0, -1):
-            Df2.loc[i - 1, "bus_t2"] = self.data_formater(Df2.bus_t2[i - 1], Df2.bus_t2[i], i - 1,Df2.z,sg[1],Df2.tb2)
-
-        max_width =max(Df2[["bus_t1", "bus_t2"]].max())+Df2.z.max()
-
-        max_hight = sum(Df2.distance[0 : num - 1]) + 100
-        print(max_width,max_width/Df2.z[0])
-        legendc = dict()
-        for i in range(0, num):
-            offset_r = Df2.offset[i] - Df2.z[i]
-            sum_dis = sum(Df2.distance[0:i])
-            while offset_r < max_width:
-                for j in range(nump):
-                    if green_time[j,i] == 0:
-                        continue
-                    else:
-                        legend=ax1.add_patch(
-                            plt.Rectangle(
-                                (offset_r, sum(Df2.distance[0:i])),
-                                green_time[j, i],
-                                20,
-                                facecolor=colors[j]["color"],
-                                hatch=colors[j]["hatch"],
-                                fill=colors[j]["fill"],
-                                edgecolor='black',
-                                linewidth=0.5
-                            )
-                        )
-                        if legends[j]==0:
-                            legends[j]=legend
-                        offset_r += green_time[j,i]
-                        legends.append(legend)
-
-        for i in range(0,num-1):
-            dis=sum(Df2.distance[0:i])
-            if Df2.bb1[i]==0:
-                continue
-            else:
-                if bus_stop[i]>0:
-                    bus_dis=(bus_stop[i]-dis)
-                    zip_x1,zip_y1=self.onbound(Df2.bb1[i],Df2.bus_t1[i],bus_dis/Df2.on_bus_v1[i],dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x1,zip_y1)),fill=False,linewidth=1))
-
-                    zip_x2,zip_y2=self.onbound(Df2.bb1[i],Df2.bus_t1[i]+bus_dis/Df2.on_bus_v1[i]+Df2.dw1[i],
-                    bus_dis/Df2.on_bus_v1[i],dis+bus_dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x2,zip_y2)),fill=False,linewidth=1))
-                    plt.plot([zip_x1[3],zip_x2[1]],[zip_y1[3],zip_y2[1]],color='coral',linewidth=3)
-                else:
-                    zip_x,zip_y=self.onbound(Df2.bb1[i],Df2.bus_t1[i],Df2.tb1[i],dis,Df2.distance[i])
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
-
-        for i in range(1,num):
-            dis=sum(Df2.distance[0:i])
-            if Df2.bb2[i]==0:
-                continue
-            else:
-                if bus_stop[i-1]>0:
-                    bus_dis=dis-bus_stop[i-1]
-                    zip_x1,zip_y1=self.inbound(Df2.bb2[i],Df2.bus_t2[i],bus_dis/Df2.in_bus_v1[i-1],dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x1,zip_y1)),fill=False,linewidth=1))
-
-                    zip_x2,zip_y2=self.inbound(Df2.bb2[i],Df2.bus_t2[i]+bus_dis/Df2.in_bus_v1[i-1]+Df2.dw2[i-1],
-                    bus_dis/Df2.in_bus_v1[i-1],dis-bus_dis,bus_dis)
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x2,zip_y2)),fill=False,linewidth=1))
-                    legendx,=plt.plot([zip_x1[0],zip_x2[2]],[zip_y1[0],zip_y2[2]],color='coral',linewidth=3)
-                else:
-                    zip_x,zip_y=self.inbound(Df2.bb2[i],Df2.bus_t2[i],Df2.tb2[i-1],dis,Df2.distance[i-1])
-                    ax1.add_patch(pch.Polygon(xy=list(zip(zip_x,zip_y)),fill=False,linewidth=1))
-
-
-        plt.xlim([0,max_width,])
-        plt.ylim(0, sum(Df2.distance[0 : num - 1]) + 100)
-        xticks=np.arange(0,max_width,Df2.loc[0,"z"])
-        yticks=[0]+Df2["distance"].cumsum().tolist()
-        plt.xticks(xticks,[i for i in range(len(xticks))],fontsize=font1["size"])
-        plt.yticks(yticks,["S"+str(i + 1) for i in range(len(yticks))],fontsize=font1["size"])
-        legends.append(legendx)
-        ax1.legend(
-            handles=legends,
-            labels=[" "*10 for i in range(nump)]+["bus station"],
-            fontsize=20,
-            loc="center right",
-        )
-        fig1.savefig(filepath, bbox_inches="tight"
-        )
         
  
 # %%

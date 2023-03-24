@@ -53,20 +53,17 @@ class Simulation():
     def _set_input(self,vhi,ipt):
         vhi.SetAttValue("VOLUME",int(ipt))
 
-    def Set_SignalGroups(self,sgs,g,fg=None):
+    def Set_SignalGroups(self,sgs,g):
         if len(g)!=sgs.Count:
             raise ValueError("g 与 sc 长度不一致.:g is {},sgs is {}".format(len(g),sgs.Count))
         gcum=g.cumsum()
         gcum=np.insert(gcum,0,0)
-        if fg is not None:
-            gcum=fg
-            print(gcum)
         for i in range(sgs.Count):
             sg=sgs.GetSignalGroupByNumber(i+1)
             if g[i]==0:
-                self._set_signalgroup(sg,0,0,0.1,0.1)
+                self._set_signalgroup(sg,0,0,gcum[i],gcum[i])
             else:
-                self._set_signalgroup(sg,1,3,gcum[i]+4,gcum[i]+g[i])
+                self._set_signalgroup(sg,1,3,gcum[i]+4,gcum[i+1])
     
     def set_randomseed(self,seed):
         self._check_vissim()
